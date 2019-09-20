@@ -1,0 +1,1315 @@
+\chapter{Nuestra propuesta de lenguaje: \textit{tail}}
+\label{sect:form_tail}
+
+Las conclusiones alcanzadas y las decisiones tomadas en el capítulo \ref{sect:ap_ia} cobrarán forma en el diseño de un nuevo lenguaje, al que hemos llamado \textit{tail}, cuyo nombre es un juego de palabras con las siglas de ``The Artificial Intelligence Language''.\\
+
+A lo largo de este capítulo introduciremos el lenguaje, formalizaremos su sintaxis, su gramática y su sistema de tipos para terminar demostrando que \textit{tail} es turing-completo y seguro.
+
+\section{Presentación informal del lenguaje}
+
+\subsection{Aritmética básica}
+
+En cualquier lenguaje que pretenda facilitar la computación es indispensable una representación numérica con la que trabajar de forma cómoda. Esto gana aún más importancia si tenemos en cuenta la naturaleza de nuestro lenguaje, que aspira a ser un entorno donde se implementen algoritmos que hagan uso intensivo de operaciones numéricas. Por esta razón creo necesario ofrecer un amplio abanico de tipos numéricos codificados directamente en el lenguaje con el doble propósito de facilitar el trabajo con estos y a la vez poder optimizar al máximo las operaciones.\\
+
+Empezaremos introduciendo los tipos numéricos de \textit{tail} y sus representaciones. En \textit{tail} existen cuatro tipos primitivos de números: enteros, racionales, reales y complejos. Estos números se pueden expresar a través de sus representaciones literales. A continuación se muestra un ejemplo de cada tipo.
+
+\begin{lstlisting}[style=tail, caption={Ejemplo de expresiones numéricas literales}]
+5 # Número entero
+3//4 # Número racional
+2.3 # Número real
+PI # Número real
+3 + 2i # Número complejo
+\end{lstlisting}
+
+Los enteros y los racionales coinciden con la definición matemática usual.\\
+Los números reales siguen una representación de coma flotante y, ya sea un literal o una constante como $PI$, serán por necesidad aproximaciones.\\
+Por último los complejos se construyen sumando una parte real a una imaginaria. La parte real puede seguir cualquiera de las notaciones anteriores, mientras que a la imaginaria se le añade una $i$ al final. En caso de querer representar el número $i$ será necesario escribir $1i$.\\
+
+
+Las operaciones aritméticas disponibles para estos tipos son las de opuesto, suma, resta, multiplicación, división, exponenciación y módulo junto con las operaciones lógicas de comparación.
+\begin{lstlisting}[style=tail, caption={Operaciones con expresiones numéricas}]
+
+# Opuesto de un número
+-5 # Resultado: -2
+-3//4 # Resultado: -3/4
+-PI # Resultado: -3.1415...
+-(3 + 2i) # Resultado: -3 - 2i
+
+# Suma
+5 + 5 # Resultado: 10
+5 + (-5) # Resultado: 0
+3//4 + 2//4 # Resultado: 5/4
+PI + 2 # Resultado: 5.1415...
+(3 + 2i) + (2 + i) # Resultado: 5 + 3i
+
+# Resta
+5 - 5 # Resultado: 0
+5 - (-5) # Resultado: 10
+3//4 - 2//4 # Resultado: 1/4
+PI - 2 # Resultado: 1.1415...
+(3 + 2i) - (2 + i) # Resultado: 1 + i
+
+# Multiplicación
+5 * 3 # Resultado: 15
+5 * -3 # Resultado: -15
+3//4 * 2//4 # Resultado: 3/8
+PI * 2 # Resultado: 6.2831
+2 * (3 + 2i) # Resultado: 6 + 4i
+(3 + 2i) * (2 + i) # Resultado: 4 + 7i
+
+# División
+5 / 3 # Resultado: 1.666...
+3//4 / 2//4 # Resultado: 3/2
+PI / 2 # Resultado: 1.5707...
+(2 + 2i) / 2 # Resultado: 1.0 - 1.0i
+2 / (2 + 2i) # Resultado: 0.5 - 0.5i
+(3 + 2i) / (2 + i) # Resultado: 1.6 + 0.2i
+
+# Exponenciación
+5 ^ 2 # Resultado: 25
+3//4 ^ 2 # Resultado: 9/16
+PI ^ 2 # Resultado: 9.8696...
+(3 + 2i)^2 # Resultado: 5 + 12i
+
+# Módulo. Solo se permite sobre naturales o enteros.
+7 % 5 # Resultado: 2
+-7 % 5 # Resultado: -2
+7 % -5 # Resultado: 2
+
+# Comparaciones. Las comparaciones entre números permitidas son las usuales:
+# = (igual), != (distinto), > (mayor), < (menor), >= (mayor o igual),
+# <= (menor o igual).
+2 = 2 # Resultado: True
+2.3 = 2.3 # Resultado: True
+2.3 != 2 # Resultado: True
+2 < 3 # Resultado: True
+2.25 > 3 # Resultado: False
+3 <= 3 # Resultado: True
+4 >= 2 # Resultado: False
+(3 + 2i) = (3 + 2i) # Resultado: True
+(3 + 2i) > (1 + 2i) # Resultado: True
+\end{lstlisting}
+
+Las operaciones $>$, $<$, $>=$ y $\mathligsoff <=$ sobre los complejos se definen como el orden lexicográfico en $\mathbb{R}^2$.\\
+
+De la misma forma se implementa el álgebra de Boole mediante las operaciones $and$, $or$, $xor$ y $not$ y los literales $True$ y $False$ como se describe en el siguiente listado.
+
+\begin{lstlisting}[style=tail, caption={Operaciones booleanas}]
+# Algebra de Boole
+
+# And
+False and False # Resultado: False
+False and True # Resultado: False
+True and False # Resultado: False
+True and True # Resultado: True
+
+# Or
+False or False # Resultado: False
+False or True # Resultado: True
+True or False # Resultado: True
+True or True # Resultado: True
+
+# Xor
+False xor False # Resultado: False
+False xor True # Resultado: True
+True xor False # Resultado: True
+True xor True # Resultado: False
+
+# Not
+not False # Resultado: True
+not True # Resultado: False
+\end{lstlisting}
+
+\subsection{Strings y operaciones de entrada y salida}
+
+Aunque tengamos la capacidad de realizar cálculos aritméticos, para que nuestros programas sean realmente útiles es necesario que puedan comunicarse con el mundo exterior, recibiendo parámetros y mostrando resultados. Esta funcionalidad se implementa tradicionalmente utilizando secuencias de caracteres o ``strings'', ya que es la forma más natural de interactuar con el usuario. El sistema que implementa \textit{tail} con este fin es muy básico, y está pensado para que a partir de él se construyan abstracciones de más alto nivel. En el siguiente listado se muestran ejemplos de los elementos que lo componen. 
+
+\begin{lstlisting}[style=tail, caption={Strings y Entrada/Salida}]
+# Los Strings se delimitan con comillas
+"Hola Mundo!"
+
+# Se puede evaluar código dentro de un String usando "\{\}"
+"2 + 3 = {2 + 3}" # Resultado: "2 + 3 = 5"
+
+# Un String se puede imprimir por pantalla con la fución write
+write("Hola Mundo!\n")
+writeln("Hola Mundo!")
+
+# La función read lee un caracter de un archivo
+c := read()
+# La función readln almacena la siguiente linea de un archivo en un string
+l := readln()
+
+# Los archivos estandar son
+stdin, stdout, stderr, stdnull
+# Los archivos se pueden utilizar como parámetro en las funciones anteriores
+writeln("Hola Mundo!", stderr)
+# Al leer del archivo nulo se omite la operación y se devuelve el string vacío
+l := readln(stdnull)
+# Al escribir en el archivo nulo se omite la operación
+write("Hola Mundo!\n", stdnull)
+# Las funciones write y writeln utilizan stdout como archivo por defecto
+# Las funciones read y readln ulitizan stdin como archivo por defecto
+
+typeof stdin # Resultado: ReadFile
+typeof stdout # Resultado: WriteFile
+typeof stdnull # Resultado: File
+\end{lstlisting}
+
+Este sistema, a pesar de utilizar elementos tradicionales como los archivos y las funciones \textit{read()} y \textit{write()} y tener carencias en las operaciones disponibles con strings y archivos, dispone de dos elementos que en nuestra opinión son interesantes.\\
+
+Uno es la existencia del archivo \textit{stdnull}, inspirado en el directorio \mbox{\textit{/dev/null}} de unix, que permite, utilizando adecuadamente variables, mostrar u omitir la salida por consola de ciertas líneas con mínimo esfuerzo, algo muy útil a la hora de debuggear.\\
+
+El otro es la diferenciación entre los tipos \textit{File}, \textit{ReadFile} y \textit{WriteFile}, que como su nombre indica restringe las operaciones posibles sobre el archivo a lectura y escritura, solo lectura y solo escritura respectivamente. Esto es un paso más sobre los modos de apertura que encontramos en otros lenguajes, ofreciendo una capa de seguridad extra que nos indica en tiempo de compilación si estamos utilizando una operación inválida sobre el archivo.
+
+
+\subsection{Tipos, variables y átomos}
+
+Ya hemos visto algunos de los tipos base disponibles en \textit{tail}, como Bool, String, File y los tipos numéricos. Sin embargo el sistema de tipos de \textit{tail} es mucho más rico y se trata, de hecho, de una de las características principales que lo hacen tan interesante en el campo de la inteligencia artificial. De momento introduciremos la sintaxis básica para declarar variables y anotar sus respectivos tipos.
+
+\begin{lstlisting}[style=tail, caption={Variables y funciones}]
+# El tipo de una variable se declara con ":"
+x : Int
+
+# Para asignar un valor a una variable se utiliza ":="
+x := 23
+
+# La declaración y asignación se pueden hacer en un único paso
+y : Real := 2.3
+
+# El tipo a -> b hace referencia a las funciones que toman un parámetro
+# de tipo a y devuelven un valor del tipo b
+f : Int -> Int
+
+# Para asignar una expresión a una función los parametros se ponen entre "()"
+f(x) := x + 1
+
+# En caso de no tener parámetros los paréntesis siguen siendo necesarios
+g() : Void -> Int := 23
+
+# Las funciones se invocan con "nombre\_función(parámetros)"
+f(22) # Resultado: 23
+\end{lstlisting}
+
+%# Se permite la sobrecarga de operadores con una sintaxis especial
+%·+·(a, b) : String, String -> String := ... # Sobrecarga el operador binario "+" en Strings
+%-·(l) : List -> List := ... # Sobrecarga el operador unario "-"\ en listas
+%·++(x) : Complex -> Complex := ... # Sobrecarga el operador unario "++"\ por la derecha
+%|·|(v) : Vector -> Nat := ... # Sobrecarga el operador |·| en vectores
+
+%# |v| es azucar sintáctico para |·|(v), por lo demás son funciones normales
+%# Operadores permitidos: +·, -·, #·, $·, ~·, ¬·, @·, &·, not·,
+%#                        ·++, ·--,
+%#                        ·+·, ·-·, ·<·, ·>·, ·=·, ·!=·, ·<=·, ·>=·, ·or·, ·and·, ·xor·, ·/·, ·//·, ·%·, ·*·, ·^·,
+%#                        |·|, ·[·]
+%# Pecedencias: Unario prefijo > Unario posfijo > Binario > Envolvente
+
+El sistema de tipos elegido combina dos modelos diferentes que se complementan especialmente bien y que tienen como objetivo conseguir una transición lo más suave posible entre un programa sin tipos y uno completamente tipado. Como ya hemos comentado esta técnica de desarrollo de software brilla especialmente en entornos donde se requieren prototipados rápidos, sin una arquitectura diseñada de antemano y que sufren numerosos cambios en el proceso, pero que a la vez no pueden prescindir de cierto nivel de seguridad. Estas características las cumplen al pie de la letra muchos programas de inteligencia artificial de la actualidad. La habilidad de poder mezclar expresiones tipadas y no tipadas se la aporta el modelo del tipado gradual, lo cual logra añadiendo un nuevo tipo, el ``?'', significando que no se conoce el tipo de la expresión en tiempo de compilación.
+
+\begin{lstlisting}[style=tail, caption={Tipos graduales}]
+# Tipo ?
+x : ?
+
+# A x se le puede asignar cualquier valor, cuyo tipo será comprobado en
+# tiempo de ejecución
+x := 23
+x := "Hola"
+
+# Si no se declara explícitamente el tipo de una variable se le asigna ?
+y := 32
+y := "Ciao"
+
+# En una función el tipo por defecto es ? -> ?
+foo(var) := var + 1
+foo("Hola") # Error en tiempo de ejecución
+\end{lstlisting}
+
+Aquí podemos ver el beneficio que aporta la decisión de poder anotar el tipo de una variable y asignarle un valor de forma separada. Al escribir un primer prototipo no tenemos que preocuparnos por los tipos, pudiendo añadir más tarde las anotaciones necesarias justo encima de las asignaciones, sin siquiera tener que modificar las lineas ya escritas. Del mismo modo se facilita comentar las anotaciones de tipos.\\
+
+La segunda capacidad del sistema es la de poder unir, intersecar y negar tipos de forma análoga a los conjuntos matemáticos, disponiendo así de un estadio más en la transición entre expresiones tipadas y no tipadas. Ya no solo podemos decidir si una variable tendrá un tipo concreto o no, sino que además podemos asignarle un conjunto de tipos posibles con \textit{or} y \textit{not} e ir afinando con \textit{and}.
+
+\begin{lstlisting}[style=tail, caption={Unión e intersección de tipos}]
+# Unión de tipos
+# Acepta tanto enteros como Strings
+foo(var) : Int or String -> ? := ...
+
+# Intersección de tipos
+# Acepta valores que pertenezcan tanto al conjunto de Printables
+# como al de Iterables.
+foo(var) : Printable and Iterable -> ? := ...
+
+# Complementario de un tipo
+# Acepta cualquier valor que no sea entero.
+foo(var) : not Int -> ? := ...
+\end{lstlisting}
+
+Me parece apropiado introducir en este punto los átomos como un ejemplo de cómo distintos elementos que podrían parecer independientes dentro de un lenguaje, con ligeros retoques, pueden apoyarse entre ellos llegando a ser más útiles que la suma de sus partes.\\
+
+Los átomos (atoms) o símbolos (symbols) son un tipo primitivo presente en diferentes lenguajes como \textit{Erlang}, \textit{Lisp} o \textit{Prolog} cuyas instancias de distinguen de forma única por su nombre. Su principal utilidad es la de servir como identificadores fáciles de recordar. Tradicionalmente, si el lenguaje tiene tipado estático, todos los átomos se agrupan bajo un único tipo, sin embargo gracias a la capacidad de nuestro sistema de unir, intersecar y negar tipos nosotros podemos hacer algo más interesante.
+
+\begin{lstlisting}[style=tail, caption={Átomos}]
+# Los literales de átomos se declaran con ":nombre\_átomo"
+:atomo
+
+# Todos los átomos tienen un tipo predefinido que se representa como su nombre
+# en CamelCase
+typeof :mi_atomo # Resultado: :MiAtomo
+
+# Además todos los tipos átomo son un subtipo de Atom.
+
+# Los átomos son útiles para ser utilizados como flags
+f : Int, Int, :Suma or :Resta -> Int
+f(x, y, op) :=
+  if op = :suma then
+    x + y
+  else
+    x - y
+  
+f(22, 1, :suma) # Resultado: 23
+f(22, 1, :smua) # Error en tiempo de compilación
+\end{lstlisting}
+
+Lo que hemos hecho ha sido asignarle a cada átomo su propio tipo, el cual solo puede tener una instancia. En un sistema de tipos tradicional esto no tendría mayores consecuencias, puesto que limitar una variable o parámetro a un único valor no es muy útil. En cambio, al combinarlo con la unión e intersección de tipos podemos confeccionar una lista de identificadores admitidos (o excluidos mediante \textit{not}), de forma que el compilador puede informarnos en el momento en que intentemos utilizar un átomo incorrecto.
+
+Aún con un sistema expresivo y unos tipos primitivos adecuados llegará un momento en el que el usuario necesite definir sus propios tipos. El mecanismo disponible en \textit{tail} para este fin consiste en una extensión de las variants (también conocidas como algebraic data types), que a la vez que mantiene sus propiedades usuales permite que cumplan la función de records (también conocidos como structs).
+
+
+\begin{lstlisting}[style=tail, label={lst:tipos}, caption={Declaración de tipos}]
+# Un tipo se declara con "variant"\ seguido de sus posibles valores
+variant Pajaro :: Colibri | Gaviota | Aguila
+
+# Para invocar un constructor de un tipo usamos "NombreTipo::NombreConstructor"
+Pajaro::Aguila = Pajaro::Gaviota # Resultado: False
+
+# Los constructores pueden tener parámetros y se permiten definiciones recursivas
+variant List :: Cell(next, value) : List, ? | End
+
+# Estos constructores se llaman pasando los parámetros con "()"
+List::Cell(List::End, 1) # Resultado: Lista con el elemento 1
+
+# Se puede acceder a los valores del constructor de un tipo mediante "."
+# Esta funcionalidad permite que las variants se usen como records
+variant Point :: Point(x, y) : Real, Real
+norm(p:Point) := sqrt(p.x^2 + p.y^2)
+
+# Gracias a un poco de azucar sintáctico podemos simular objetos.
+# En la llamada a una función tomamos lo que hay a la izquierda de un punto
+# como el primer argumento.
+p.norm() # Esto es lo mismo que norm(p).
+\end{lstlisting}
+
+\subsection{Estructuras de datos}
+
+Es indispensable para un lenguaje que pretenda agilizar el desarrollo de software proporcionar un conjunto suficientemente amplio de estructuras de datos. Esto es debido a que disponer de estructuras estándar no solo libra al programador de construir las suyas propias o de buscarlas en una biblioteca, sino que además unifica las interfaces de códigos escritos por distintas personas, evitando tener que realizar tediosas conversiones entre estructuras equivalentes.\\
+
+En \textit{tail} se incluyen tuplas, listas, vectores, diccionarios (o tablas hash) y matrices. Las matrices son especialmente interesantes teniendo en cuenta el uso intensivo que se hace del álgebra lineal en la inteligencia artificial actual, especialmente en los campos de visión por computador y aprendizaje automático.
+
+\begin{lstlisting}[style=tail, caption={Estructuras de datos}]
+# Tuplas
+tupla : Int, Bool, Real := 23, False, 2.3
+
+# Se pueden extraer los elementos de una tula con pattern matching
+a, b, c := tupla # Resultado: a = 23, b = False, c = 2.3
+
+# Aunque las funciones solo aceptan un parámetro se pueden
+# usar tuplas y pattern matching para pasar varios
+f(x, y, z) : Int, Bool, Real -> Unit := ...
+f(a, b, c) # Igual que f(tupla)
+
+# Tambien se pueden usar tuplas para devolver múltiples valores
+f(x) := x + 1, x + 2, x + 3
+a, b, c := f(22) # Reslutado: a = 23, b = 24, c = 25
+
+
+# Listas
+lista : List of Int := <2 3 2 32 323>
+
+# Cuando no se especifica, el tipo por defecto de una lista es List of ?
+List = List of ? # Resultado: True
+
+
+# Vectores
+vector : Vector of Real := [23.2 3.23 32.3 2.0]
+
+# Cuando no se especifica, el tipo por defecto de un vector es Vector of ?
+Vector = Vector of ? # Resultado: True
+
+
+# Diccionarios
+d : Dictionary of Atom, Int := :clave1 => 23, :clave2 => 32
+
+# Notar que la selección de parámetros por nombre en funciones consiste solo en
+# pasar un diccionario.
+
+# Cuando no se especifica, el tipo por defecto de un diccionario
+# es Dictionary of ?, ?
+Dictionary = Dictionary of ?, ? # Resultado: True
+
+
+# Matrices
+m : Matrix of Real := [2.3 3.2 | 23.2 32.3]
+
+# Se puede utilizar tanto "|"\ como "||"\ para separar filas
+# esto permite escribir la matriz anterior como
+m := [ 2.3  3.2  |
+     | 23.2 32.3 ]
+\end{lstlisting}
+
+La sintaxis elegida para las tuplas no es casual. En \textit{tail} las funciones solo admiten un único parámetro, cuando construyes una función de $n$ parámetros realmente estás definiendo una función cuyo único parámetro es una tupla de $n$ elementos y mediante pattern matching le estás asignando un nombre a cada uno de ellos. Lo mismo ocurre cuando llamas una función con $n$ parámetros separados por comas; en vez de pasarlos uno a uno el único parámetro que realmente pasas es una tupla construida de forma literal dentro de los paréntesis. De esta forma si $t := 1, 2, 3$ son equivalentes $f(1, 2, 3)$ y $f(t)$. Esta construcción que en principio podría parecer irrelevante facilita enormemente el trabajo con funciones que devuelven varios parámetros, como se muestra en el siguiente ejemplo.\\
+
+\begin{lstlisting}[style=tail]
+f : Int -> Int, Int, Int
+f(x) := x+1, x+2, x+3
+
+g : Int, Int, Int -> Int
+g(a, b, c) := a + b + c
+
+# En otro lenguaje primero tendríamos que deconstruir la tupla que devuelve f
+a, b, c := f(1)
+g(a, b, c) # Resultado: 9
+
+# En tail la composición puede hacerse directamente
+g(f(1)) # Resultado: 9
+\end{lstlisting}
+
+\subsection{Control de flujo}
+
+La última parte de \textit{tail} que queda por explicar es el control de flujo, que agrupa las construcciones que permiten decidir las acciones que tomará el programa dependiendo del resultado de computaciones anteriores. En \textit{tail} solo existen dos, \textit{if-elif-else} y \textit{match}.
+
+
+\begin{lstlisting}[style=tail, label={lst:control_flujo}, caption={Control de flujo}]
+# Condicionales
+if cond then 1 else 0 # Resultado: 1 si cond = True, 0 si cond = False
+
+if cond1 then 1
+elif cond2 then 2
+else 3
+# Resultado: 1 si cond1 = True, 2 si cond1 = False y cond2 = True,
+# 3 si cond1 = cond2 = False
+
+# El tipo de una expresión condicional es la unión de los tipos de
+# todos los posibles valores
+
+typeof if cond then 1 else "Hola" # Resultado: Int or String
+
+# Si un if no tiene un else asociado se considera que else devuelve el tipo Unit
+if cond then 1 # Igual que if cond then 1 else unit
+
+
+# Pattern matching
+match n with
+  | 1 -> "Uno"
+  | 2 -> "Dos"
+  | _ -> "Otro"
+  
+match l with
+  | <> -> "No hay nada"
+  | <h | t> -> "Primer elemento: {h}, Resto de la lista: {t}"
+  
+variant Point :: Point2D(x, y) | Point3D(x, y, z)
+  
+match p with
+  | Point::Point2D(x, y) -> x + y
+  | Point::Point3D(x, y, z) -> x + y + z
+  
+x : Point or Pajaro
+
+match x with
+  | Point::Point2D(x, y) -> x + y
+  | Point::Point3D(x, y, z) -> x + y + z
+  | Pajaro::Colibri -> "Colibri"
+  | Pajaro::_ -> "Otro pajaro"
+  
+# El tipo de un match es la unión de los tipos de todos sus posibles valores
+typeof match b with True -> 1 | False -> False # Resultado: Int or Bool
+\end{lstlisting}
+
+La sentencia \textit{if} es un elemento clásico que se encuentra en prácticamente todos los lenguajes de propósito general, \textit{tail} no es la excepción y su funcionamiento es idéntico. La única peculiaridad que presenta es que en \textit{tail} todo es una expresión (i.e. devuelve un valor) y por tanto también el \textit{if-elif-else}. Esto en sí no es una novedad, dado que en lenguajes como Lisp los \textit{if-else} también son expresiones. El elemento novedoso es que en lenguajes tipados, si el \textit{if-elif-else} es una expresión, se le tiene que exigir que los resultados del \textit{if}, de los \textit{elif} y del \textit{else} sean del mismo tipo, pero gracias a la posibilidad de unir tipos nosotros no nos tenemos que enfrentar a esta restricción.
+
+Por otro lado el \textit{match}, aunque es común en lenguajes funcionales, puede resultar un poco más extraño. Su principal función es la de deconstruir estructuras como tuplas, listas o variants y decidir una acción dependiendo de sus valores. Al igual que ocurría con el \textit{if}, en lenguajes tipados como ML se exige que todos los resultados posibles del \textit{match} sean del mismo tipo; a nosotros nos basta con calcular la unión.
+
+\section{Sintaxis} \label{sect:sintaxis}
+
+Ya tenemos una visión general de \textit{tail} y su funcionamiento, ahora nos será mucho más fácil entender las formalizaciones subyacentes. Comenzaremos explicando la gramática que define su sintaxis y la notación utilizada para denotar distintas construcciones.\\
+
+Antes de empezar es necesario destacar que esta gramática no es todo lo rigurosa que podría ser. Esto es porque su finalidad no es ser una formalización que pueda ser entendida por un ordenador (la gramática utilizada para tal fin puede encontrarse en la segunda sección del apéndice \ref{apendice:sintaxis_tail}), sino ser fácilmente entendible por los lectores y descargar la notación de las reglas de evaluación y tipado.\\
+
+En primer lugar definimos los términos del lenguaje. Recordar que los términos son los bloques básicos del sistema y pueden aparecen en los pasos intermedios de la evaluación. A continuación se muestra la gramática de los términos que considero más relevantes o que necesitan de una explicación, la gramática exhaustiva se puede encontrar en la primera sección del apéndice \ref{apendice:sintaxis_tail}).
+
+\smallskip
+\hspace*{-3cm}
+\begin{grammar}{t}{términos}
+x             & variable \\
+n             & constante numérica \\
+\ \<match>\ t\ \<with>\ n\ \mathligsoff -> \mathligson\ t & match numérico \\
+\ \<match>\ t\ \<with>\ \_\ \mathligsoff -> \mathligson\ t & match por defecto \\
+``s"         & constante string \\
+\ :x            & átomo \\
+\ \<if> t \<then> t\ \{\<elif> t \<then> t\} \<else> t & condicional \\
+\ \<lambda> x.t     & función lambda \\
+t_i^{i \in 1...n} & tupla \\
+\ \<match>\ t\ \<with>\ t_i^{i \in 1...n} \mathligsoff -> \mathligson\ t & match tupla \\
+\ <t_i^{i \in 1...n}> & lista \\
+\ \<match>\ t\ \<with>\ <t \mid \overline{t}> \mathligsoff -> \mathligson\ t & match lista \\
+{} [{t_i}^{i \in 1...n}] & vector \\
+{} [t_{ij}^{\stackrel{i \in 1...n}{j \in 1...m}}] & matriz \\
+{t_i => \overline{t}_i}^{i \in 1...n} & diccionario\\
+\ \<variant> V::C_i({x_{ij} : \tau_{ij}}^{j \in 1...r_i})^{i \in 1...n} & declaración variant \\
+{V::C_i(t_{ij})}^{j \in 1...r_i} & instancia variant \\
+\ \<match> t \<with> {V::C_i(t_{ij})}^{j \in 1...r_i} \mathligsoff -> \mathligson\ t & match variant \\
+... \\
+\end{grammar}
+\smallskip
+\smallskip
+
+
+Diseccionemos esta gramática. Lo primero que nos encontramos son las variables. En \textit{tail} las variables empiezan por una letra minúscula y admiten letras, números y algunos caracteres especiales. Pero ahora no nos preocupamos por eso y simplemente las notaremos por $x$ o alguna variación como $x_i$, $x'$ o $\overline{x}$. Lo mismo ocurre con las constantes numéricas, la notación $n$ y sus variantes recogen todas las formas numéricas que hemos visto en la sección anterior, desde los números naturales a los complejos.\\
+
+Seguidamente aparece una forma de $\<match>$ aplicada a números. Se trata también de una forma simplificada en la que se obvian todas las demás posibles opciones para centrarse en una específica que empareja con un número. Como se ha apuntado antes, esta gramática no admitiría la forma descrita en el listado \ref{lst:control_flujo}, pero permite simplificar notablemente la notación. Se da la misma situación con el match por defecto, no excluye que puedan existir otras opciones de emparejamiento, pero se centra en ese caso en concreto.\\
+
+Continuamos con $``s"$, que representa un literal de string. El uso de la $s$ indica que el interior de las comillas no es necesariamente un término (en este caso sería $``t"$) y que sigue un formato distinto de las variables y los numerales. Del mismo modo $:x$ indica que un átomo se escribe como una variable precedida por ``:".\\
+
+En el caso del condicional lo único a explicar es el significado de las llaves. La expresión que se encuentra entre \{\} puede repetirse cero o más veces, es decir, $\<elif> t$ puede obviarse o repetirse. En el término $\<lambda> x.t$ destacar que el uso de la $x$ implica que sigue el mismo formato que las variables.\\
+
+En las tuplas, listas, vectores, matrices y diccionarios usamos la notación $t_i^{i \in 1...n}$ o $t_{ij}^{\stackrel{i \in 1...n}{j \in 1...m}}$ para indicar una secuencia de $n$ términos o una disposición en dos dimensiones de $n \times m$ términos.\\
+
+Nos queda revisar la notación de las variants, en este caso tenemos dos variedades, pero ambas comparten los mismos elementos. En la expresión $V::C_i({x_{ij} : \tau_{ij}}^{j \in 1...r_i})^{i \in 1...n}$ la $V$ hace referencia al nombre de la variant y $C_i$ a los $n$ posibles constructores. El uso de $x_{ij} : \tau_{ij}$ nos indica una secuencia de $r_i$ elementos (i.e. el número varía dependiendo del constructor) con formato ``variable:tipo''. Como veremos más adelante $\tau$ recoge todos los posibles tipos, al igual que $t$ recoge todos los posibles términos. Por último ${V::C_i(t_{ij})}^{j \in 1...r_i}$ indica la instanciación de una variant mediante el constructor $i$-ésimo. Esta notación quizá pueda resultar algo confusa a primera vista, pero encaja bastante bien con la descrita en el listado \ref{lst:tipos}.\\
+
+
+Respecto a la gramática de los valores no hay mucho que decir, simplemente demarcan que términos son válidos como resultado final de la evaluación de un programa. En lo que respecta a la notación siguen la misma que acabamos de ver.\\
+
+\smallskip
+\hspace*{-2cm}
+\begin{grammar}{v}{valores}
+n             & constante numérica \\
+True          & constante true \\
+False          & constante false \\
+``t^s"         & constante string \\
+\ :x            & átomo \\
+\ \<lambda> x.t     & función lambda \\
+t_i^{i \in 1...n} & tupla \\
+\ <t_i^{i \in 1...n}> & lista \\
+{} [{t_i}^{i \in 1...n}] & vector \\
+{} [t_{ij}^{\stackrel{i \in 1...n}{j \in 1...m}}] & matriz \\
+{t_i => \overline{t}_i}^{i \in 1...n} & diccionario\\
+V::C_i(t_{ij})^{j \in 1...r_i} & instancia variant \\
+\end{grammar}
+\smallskip
+
+En referencia a la sintaxis que seguirán las expresiones sobre tipos, se hace una distinción entre los tipos estáticos, aquellos que se conocen completamente en tiempo de compilación, que notaremos por $T$ o $S$ y los tipos graduales, denotados por $\tau$ o $\sigma$. La principal diferencia entre ambos grupos es que la sintaxis de los tipos dinámicos permite la utilización de $?$ en sus expresiones. Además, es fácil observar que los tipos estáticos son un subconjunto de los graduales.\\
+
+\hspace*{-2cm}
+\begin{grammar}{T}{tipos estáticos}
+B                            & tipos base \\ % Int, String, :<NombreAtomo>, ...
+T -> T                       & tipo función \\
+T \<or> T                    & unión de tipos \\
+T \<and> T                   & intersección de tipos \\
+\ \<not> T                   & negación de tipos \\
+Void                         & tipo void \\
+\mathbb{0}                   & tipo vacío \\
+U                            & tipo universal \\
+{T_i}^{i \in 1...n}          & tipo tupla \\
+List \<of> T                 & tipo lista \\
+Vector \<of> T               & tipo vector \\
+Dictionary \<of> T, T        & tipo diccionario \\
+Matrix \<of> T               & tipo matriz \\
+\end{grammar}
+
+\hspace*{-2cm}
+\begin{grammar}{\tau}{tipos graduales}
+\ ?                            & tipo desconocido \\
+B                            & tipos base \\ % Int, String, :<NombreAtomo>, ...
+\tau -> \tau                 & tipo función \\
+\tau \<or> \tau              & unión de tipos \\
+\tau \<and> \tau             & intersección de tipos \\
+\ \<not> T                     & negación de tipos \\
+Void                         & tipo vacío \\
+U                            & tipo universal \\
+{\tau_i}^{i \in 1...n}       & tipo tupla \\
+List\ [\<of> \tau]           & tipo lista \\
+Vector\ [\<of> \tau]         & tipo vector \\
+Dictionary\ [\<of> \tau, \tau]      & tipo diccionario \\
+Matrix\ [\<of> \tau]         & tipo matriz \\
+\end{grammar}
+
+\bigskip
+
+Es importante hacer una distinción entre el tipo $\mathbb{0}$ y el tipo $Void$. El tipo $\mathbb{0}$, interpretado como un conjunto, sería el equivalente al conjunto vacío, es decir, no existe ningún término que tenga como tipo $\mathbb{0}$. Su consideración es necesaria de forma teórica para que exista un tipo que sea subtipo de cualquier otro, pero en la práctica no es posible anotarlo en el lenguaje, ya que un elemento de tipo $\mathbb{0}$ no puede existir, una función que acepte un elemento de tipo $\mathbb{0}$ no puede ser llamada y una función que devuelva un elemento de tipo $\mathbb{0}$ se vería forzada a diverger. Por otro lado el tipo $Void$ es más parecido al tipo $unit$ presentado en \cite{TPL}, es decir, un tipo que solo tiene un elemento y cuyo uso es el que estamos acostumbrados en lenguajes como \textit{C} o \textit{Java}, es decir, notar funciones que no reciben ningún parámetro o que no devuelven ningún valor.\\
+
+Por último definimos la sintaxis que ulitlizaremos para trabajar con el contexto. Es muy similar a la vista en el capítulo \ref{sect:sistemas_de_calculo}, pero esta vez se utiliza tanto para anotar el tipo como para asignarle un valor a una variable.\\
+
+\hspace*{-2cm}
+\begin{grammar}{\Gamma}{contexto}
+\o               & contexto vacío \\
+\Gamma, x:\tau   & anotación de tipo \\
+\Gamma, x:=t     & asignación de valor \\
+\end{grammar}
+
+\bigskip
+
+
+Conocida la sintaxis de \textit{tail} podemos pasar a explicar ciertos aspectos sobre cómo se evalúan sus expresiones.
+
+%% Evaluación
+\section{Reglas de evaluación}
+\mathlig{~<}{\ \widetilde{\leq}\ }
+
+Una de la primeras diferencias que uno percibe cuando se aproxima tanto a lenguajes imperativos como a funcionales es la distinción (o la falta de ella) entre sentencias y expresiones.
+Mientras que en los lenguajes imperativos clásicos existen sentencias, términos que cambian el estado del programa pero no devuelven ningún valor (p.e. asignaciones), los lenguajes funcionales tienden a ser reticentes a la hora de permitir cambios de estado y es más normal que todos sus elementos sean expresiones. Por su parte, \textit{tail} mezcla la tradición de ``todo es una expresión'' procedente de lenguajes funcionales como \textit{Lisp} y \textit{ML} con el cambio de estado que permiten los sistemas imperativos. De esta forma se evita el uso de construcciones que intentan emular el funcionamiento de las sentencias, como la expresión ``let'', que imita las asignaciones, manteniendo elementos que facilitan el razonamiento sobre el lenguaje como el operador de secuencia.\\
+
+Precisamente por este motivo se ha tomado la decisión de que, términos como la anotación de un tipo o la asignación de un valor, que normalmente serían sentencias, sean expresiones que devuelven el valor que se asigna o que se anota, como se puede ver en las siguientes reglas.\\
+
+\[
+\inference[E-Assig:]
+{x \<:=> v \in \Gamma}
+{\begin{array}{@{}c@{}}
+\Gamma |- x \<:=> v \\
+x\<:=>v -> v
+\end{array}}
+\]
+
+\bigskip
+
+\[
+\inference[E-TypeDec:]{}{t:\tau -> t}
+\]
+
+\bigskip
+
+
+Aunque esto es algo que no parece demasiado útil, supone no desperdiciar una oportunidad para generar un valor y permite, por ejemplo, la concatenación de asignaciones y anotaciones de tipos o que la asignación de un elemento sea permitida como condición en un $\<if>$ o un $\<match>$, que junto con unas reglas de ``scope'' adecuadas puede producir algo como esto:\\
+
+\begin{lstlisting}[style=tail]
+if x := f() then
+  writeln("x es {x}")
+\end{lstlisting}
+
+Por otro lado el operador secuencia ``convierte'' expresiones en sentencias evaluando la que se encuentra a la izquierda y descartando su resultado, lo cual es reminiscente al uso del ``$\<;>$'' en \textit{Java} o \textit{C}.\\
+
+\[
+\inference[E-Seq:]{t_1 -> t_1'}{t_1 \<;> t_2 -> t_1' \<;> t_2}
+\]
+
+\bigskip
+
+\[
+\inference[E-SeqNext:]{}{v \<;> t -> t}
+\]
+
+\bigskip
+
+Un elemento recurrente en el diseño de lenguajes de programación es el uso del llamado azúcar sintáctico (sintactic sugar), que no es más que la utilización de elementos ya definidos del lenguaje para generar formas más cómodas de usarlos. En \textit{tail} un ejemplo lo podemos ver en la declaración de funciones, que se traduce en la asignación de una expresión lambda a una variable.\\
+
+\[
+\inference[E-FuncSintSug:]{}{f(x) := t -> f := \<lambda> x.t}
+\]
+
+\bigskip
+
+La última regla que considero necesitada de explicación es la que evalúa los bloques. Un bloque en definitiva, cumple la misma función de alteración del orden de evaluación que un paréntesis, pero generando un nuevo ``scope''. El scope es el ámbito de visibilidad del contexto, en un scope diferente se utiliza un contexto diferente. Esto significa que dependiendo del scope en el que te encuentres tendrás acceso a unas variables o a otras. Tradicionalmente los scopes se distribuyen en forma de árbol, en la que los scopes inferiores tienen acceso al contexto de los superiores. Esto es precisamente lo que se indica en la regla (E-BlockRed): Con la notación $\Gamma' := \Gamma$ creamos un nuevo contexto con los mismos elementos que el actual, mientras que con $->_{\Gamma'}$, indicamos que para esa evaluación ulitlizaremos como contexto $\Gamma'$.\\
+
+\[
+\inference[E-BlockRed:]
+{t -> t'}
+{
+\Gamma' := \Gamma, \\
+BeginBlock\ t\ EndBlock ->_{\Gamma'} BeginBlock\ t'\ EndBlock
+}
+\]
+
+\bigskip
+
+\[
+\inference[E-Block:]{}{BeginBlock\ v\ EndBlock -> v}
+\]
+
+\bigskip
+
+En \textit{tail} el comienzo y el fin de un bloque se demarca mediante la identación del código, a más nivel de identación mayor profundidad de bloque. Sin embargo no es posible denotar esto explícitamente en la semántica, esa es la razón por la que se utilizan en su lugar los tokens $BeginBlock$ y $EndBlock$.\\
+
+En el apéndice \ref{apendice:evaluacion_tail} se encuentra un listado exhaustivo de reglas de evaluación.\\
+
+
+\section{Sistema de tipos}
+
+El sistema de tipos de \textit{tail} permite un tipado gradual con unión e intersección de tipos, este sistema está basado en los trabajos \cite{castagna_gradual_2017} y \cite{ranzato_gradual_2017}, modificándolos ligeramente con el fin de adaptarse al resto de elementos del lenguaje.\\
+
+Como ya se ha comentado, el equilibrio entre flexibilidad y garantías que ofrece este sistema me parece especialmente interesante cuando consideramos la implementación de algoritmos de inteligencia artificial.\\
+
+En la sección \ref{sect:sintaxis} ya se han presentado las gramáticas para construir tipos estáticos ($T$) y graduales ($\tau$). A partir de ahora notaremos los conjuntos definidos por ellas como $STypes$ y $GTypes$ respectivamente.\\
+
+Definiremos también una relación de subtipado $\leq$ sobre $STypes$ como la relación de inclusión cuando interpretamos los tipos estáticos como el conjunto de todos los valores que tienen dicho tipo. En este caso $Void$ se correspondería con el conjunto vacío y $U$ con el conjunto máximo (el conjunto de todos los valores bien tipados). Utilizaremos $\simeq$ para denotar la relación de equivalencia que se induce de $\leq$.
+Es necesario hacer notar que la relación de subtipado sobre funciones puede un poco diferente a lo que se esperaría, como se puede observar en su regla de derivación.\\
+\[
+  \inference{T_1 \leq S_1\ \ S_2 \leq T_2}{S_1 -> S_2 \leq T_1 -> T_2}
+\]
+
+Como vemos, el subtipado de los argumentos está ``invertido'', a este tipo de relación se le llama contravariante, en contraposición con las relaciones directas llamadas covariantes. En este caso la inversión responde al hecho de que una función que acepte $S_1$ como argumento, también aceptará $T_1$ y por tanto las funciones con tipo $S_1 -> T$ serán un subconjunto de las funciones con tipo $T_1 -> T$.\\
+
+Teniendo ya una relación de subtipado sobre $STypes$ el paso lógico será extenderla a $GTypes$. Para este fin tenemos que presentar algunos conceptos más.\\
+
+\begin{definition}[Concretización]
+Definimos la función de concretización $\gamma$ entre $GTypes$ y las partes de $STypes$ como:\\
+
+  \begin{align*}
+  \gamma \colon GTypes &\to \mathcal{P}(STypes)\\
+  \gamma(?) &\mapsto STypes \\
+  \gamma(\tau_1 \<or> \tau_2) &\mapsto \{T_1 \<or> T_2 \mid T_i \in \gamma(\tau_i)\} \\
+  \gamma(\tau_1 \<and> \tau_2) &\mapsto \{T_1 \<and> T_2 \mid T_i \in \gamma(\tau_i)\} \\
+  \gamma(\<not> T) &\mapsto \{\<not> T\} \\
+  \gamma(\tau_1 -> \tau_2) &\mapsto \{T_1 -> T_2 \mid T_i \in \gamma(\tau_i)\} \\
+  \gamma(B) &\mapsto \{B\} \\
+  \gamma(Void) &\mapsto \{Void\} \\
+  \gamma(U) &\mapsto \{U\} \\
+\end{align*}
+\end{definition}
+
+Intuitivamente lo único que hace la concretización es construir el conjunto de todos los tipos estáticos que podría admitir un determinado tipo gradual $\tau$.\\
+
+\begin{proposition}[Gradual Extrema]
+  Para todo tipo gradual $\tau \in GTypes$ existen dos tipos estáticos $\tau^{\Uparrow}$ y $\tau^{\Downarrow}$ tal que para todo $T \in \gamma(\tau),\ \tau^{\Downarrow} \leq T \leq \tau^{\Uparrow}$.\\
+\end{proposition}
+
+En \cite{castagna_gradual_2017} también se explica que es posible el cálculo efectivo de $\tau^{\Uparrow}$ y $\tau^{\Downarrow}$. Para calcular $\tau^{\Uparrow}$ (resp. $\tau^{\Downarrow}$) basta con remplazar $?$ por $U$ (resp. $Void$) en todas las ocurrencias covariantes y por $Void$ (resp. $U$) en las contravariantes. Ya estamos en posición de extender $\leq$ a $Gtypes$.\\
+
+\begin{definition}[Extensión del subtipado]
+  Para cada par $\sigma$, $\tau$ de tipos graduales definimos la relación $~<$ como:
+  $$\sigma ~< \tau \Leftrightarrow \sigma^{\Downarrow} \leq \tau^{\Uparrow}$$
+\end{definition}
+
+\begin{definition}[Extensión de la negación de subtipado]
+	Para cada par $\sigma$, $\tau$ de tipos graduales definimos la relación $\widetilde{\nleq}$ como:
+	$$\sigma \widetilde{\nleq} \tau \Leftrightarrow \sigma^{\Uparrow} \nleq \tau^{\Downarrow}$$
+\end{definition}
+
+En esencia, lo que esta definición nos dice es que consideraremos que un tipo gradual es subtipo (resp. no es subtipo) de otro si alguno de los tipos estáticos que acepta presentan esta relación.\\
+
+Para terminar de hacer útil este sistema necesitamos decidir cuándo podemos aplicar una función sobre un valor y qué tipo de resultado nos va a devolver. Estas nociones las formalizamos mediante el operador dominio ($dom(.)$) y el operador ``tipo del resultado" ($.\circ.$). Sobre tipos sin unión ni intersección $dom(S -> T)$ devuelve el dominio de la función (i.e. $S$) y $(S -> T) \circ S'$, siendo $S' \leq S$ devuelve el tipo que resulta de aplicar una función de tipo $(S -> T)$ a $S'$ (i.e. $T$). Por desgracia la extensión de estos operadores no es tan directa como la de la relación de subtipado, dado que determinar el dominio o el tipo que devuelven expresiones como $((Int -> Bool) \<and>\ \<not> Int) \<or> (\<not> (Bool -> Int) \<and> (Int -> Int))$ no es trivial. La solución consistirá en definir una nueva función de concretización que en \cite{castagna_gradual_2017} llaman concretización aplicativa, la cual es una definición técnica construida específicamente para la extensión de estos operadores.\\
+
+\begin{definition}[Concretización aplicativa]
+Siendo $\mathcal{P}_f$ el conjunto de todos los subconjuntos finitos, definimos las funciones $\gamma_{\mathcal{A}}^{+}$ y $\gamma_{\mathcal{A}}^{-}$ como:\\
+
+\begin{equation*}
+\begin{aligned}[t]
+  \gamma_{\mathcal{A}}^{+} \colon GTypes &\to \mathcal{P}_f(\mathcal{P}_f(GTypes))\\
+  \gamma_{\mathcal{A}}^{+}(U) &\mapsto \{\O\} \\
+  \gamma_{\mathcal{A}}^{+}(B) &\mapsto \{\O\} \\
+  \gamma_{\mathcal{A}}^{+}(?) &\mapsto \{\{? -> ?\}\} \\
+  \gamma_{\mathcal{A}}^{+}(Void) &\mapsto \O \\
+  \gamma_{\mathcal{A}}^{+}(\sigma -> \tau) &\mapsto \{\{\sigma -> \tau\}\} \\
+  \gamma_{\mathcal{A}}^{+}(\<not> T) &\mapsto \gamma_{\mathcal{A}}^{-}(T) \\
+  \gamma_{\mathcal{A}}^{+}(\tau_1 \<or> \tau_2) &\mapsto \gamma_{\mathcal{A}}^{+}(\tau_1) \cup \gamma_{\mathcal{A}}^{+}(\tau_2) \\
+  \gamma_{\mathcal{A}}^{+}(\tau_1 \<and> \tau_2) &\mapsto \{T_1 \cup T_2 \mid T_i \in \gamma_{\mathcal{A}}^{+}(\tau_i)\} \\
+\end{aligned}
+\begin{aligned}[t]
+  \gamma_{\mathcal{A}}^{-} \colon STypes &\to \mathcal{P}_f(\mathcal{P}_f(STypes))\\
+  \gamma_{\mathcal{A}}^{-}(U) &\mapsto \O \\
+  \gamma_{\mathcal{A}}^{-}(B) &\mapsto \{\O\} \\
+  \gamma_{\mathcal{A}}^{-}(Void) &\mapsto \{\O\} \\
+  \gamma_{\mathcal{A}}^{-}(S -> T) &\mapsto \{\O\} \\
+  \gamma_{\mathcal{A}}^{-}(\<not> T) &\mapsto \gamma_{\mathcal{A}}^{+}(T) \\
+  \gamma_{\mathcal{A}}^{-}(T_1 \<or> T_2) &\mapsto \{S_1 \cup S_2 \mid S_i \in \gamma_{\mathcal{A}}^{-}(T_i)\} \\
+  \gamma_{\mathcal{A}}^{-}(T_1 \<and> T_2) &\mapsto \gamma_{\mathcal{A}}^{-}(T_1) \cup \gamma_{\mathcal{A}}^{-}(T_2) \\
+\end{aligned}
+\end{equation*}
+\end{definition}
+
+\bigskip
+
+\begin{definition}[Operadores de tipos graduales]
+Sean $\tau$ y $\sigma$ dos tipos graduales tal que $\tau$ es un tipo función y $\sigma ~< \widetilde{dom}(\tau)$. Las extensiones de los operadores, $\widetilde{dom}(\tau)$ y $\tau \widetilde{\circ} \sigma$, se definen como:
+
+$$\widetilde{dom}(\tau) = \bigwedge_{S \in \gamma_{\mathcal{A}}^{+}(\tau)} \bigvee_{\rho -> \rho' \in S} \rho^{\Uparrow}$$
+
+$$\tau \widetilde{\circ} \sigma = \bigvee_{S \in \gamma_{\mathcal{A}}^{+}(\tau)} \bigvee_{\begin{array}{@{}c@{}} Q \subsetneq S \\ \sigma \widetilde{\nleq} \bigvee_{\rho -> \rho' \in Q} \rho \\ \sigma^{\Uparrow} \<and> \bigvee_{\rho -> \rho' \in S \setminus Q} \rho^{\Uparrow} \nleq Void \end{array}} \bigwedge_{\rho -> \rho' \in S \setminus Q} \rho'$$
+
+Donde $\bigwedge$ y $\bigvee$ representan las operaciones de intersección y unión de tipos ($\<and>$ y $\<or>$) sobre todos los elementos del conjunto indicado.\\
+\end{definition}
+
+Con estos operadores ya tenemos las herramientas suficientes para formalizar el sistema, sin embargo considero oportuno dar una breve justificación de por qué esta definición encaja con el comportamiento esperado. Lo primero a tener en cuenta es que esta construcción está basada en la forma normal disyuntiva, que consiste en la unión de intersecciones de tipos función, y se utiliza en los sistemas con unión e intersección de tipos pero sin tipos graduales. Un tipo en forma normal tiene la siguiente estructura:\\
+
+$$T \simeq \bigvee_{f \in F} \bigwedge_{j \in P_f} S_j -> T_j \<and> \bigwedge_{n \in N_f} \<not>(S_n -> T_n)$$
+
+Y dados $T$ un tipo función y $S \leq dom(T)$ en forma normal disjuntiva se conocen expresiones para el cálculo de los operadores:\\
+
+$$dom(T) = \bigwedge_{f \in F} \bigvee_{j \in P_f} S_j$$
+
+$$T \circ S = \bigvee_{f \in F} \bigvee_{\begin{array}{@{}c@{}} Q \subsetneq P_f \\ S \widetilde{\nleq} \bigvee_{q \in Q} S_q \end{array}} \bigwedge_{p \in P_f \setminus Q} T_p$$
+
+Sin entrar en detalles podemos ver un patrón común entre las dos definiciones. La función de la concretización aplicativa es, principalmente, definir de forma adecuada los conjuntos $F$ y $P_f$. La modificación más destacable es la adicción de la condición $\sigma^{\Uparrow} \<and> \bigvee_{\rho -> \rho' \in S \setminus Q} \rho^{\Uparrow} \nleq \mathbb{0}$ al operador $\widetilde{\circ}$, cuya utilidad se explica con un ejemplo.
+Supongamos que tenemos una función de tipo $\tau$, con $\tau = (? -> Bool) \<and> (Int -> Int)$ y se la aplicamos a un argumento de tipo $Int$. Intuitivamente el resultado debería ser de tipo $Int$, ya que solo pueden darse dos casos:\\
+
+\begin{enumerate}
+  \item Si en tiempo de ejecución $? -> Bool$ resulta ser incompatible con un argumento de tipo $Int$, solo se tendrá en cuenta la anotación $Int -> Int$ y el resultado terminará siendo de tipo $Int$.\\
+  \item Si en tiempo de ejecución $? -> Bool$ es compatible con un argumento de tipo $Int$ el resultado tendrá tipo $Bool \<and> Int$, pero como la intersección de estos tipos es vacía, la función no devolverá ningún valor y necesariamente divergerá.\\
+\end{enumerate}
+
+Veamos que ocurre al calcular $\tau\ \widetilde{\circ}\ Int$. Primero tenemos que $\gamma_{\mathcal{A}}^{+}(\tau) = \{\{? -> Bool, Int -> Int\}\}$ y por tanto consideramos un único $S = \{? -> Bool, Int -> Int\}$. En consecuencia el subconjunto $Q$ está limitado a ser $\{? -> Bool\}$, $\{Int -> Int\}$ o $\O$. La primera condición descarta $\{Int -> Int\}$ como posible $Q$, ya que $Int\ \widetilde{\nleq}\ ?$ se cumple, pero $Int\ \widetilde{\nleq}\ Int$ no. Por tanto los únicos $Q$ posibles son $Q = \{? -> Bool\}$ y $Q = \O$ produciendo como resultado $Int \<or> (Bool \<and> Int)$, equivalente a $Int$.\\
+
+Consideremos ahora que aplicamos la misma función a un elemento de tipo $Bool$. Intuitivamente deberíamos obtener un resultado de tipo $Bool$, ya que la anotación $Int -> Int$ es incompatible este argumento. Si solo dispusiésemos de la primera condición, dado que $Bool\ \widetilde{\nleq}\ ?$ y $Bool\ \widetilde{\nleq}\ Int$ obtendríamos como resultado $Bool \<or> Int \<or> (Bool \<and> Int)$, equivalente a $Bool \<or> Int$, sin embargo es imposible que la función devuelva un elemento de tipo $Int$. El problema es que estamos considerando la opción $Q = \{? -> Bool\}$, la cual no tiene sentido eliminar de $S$, ya que una función de tipo $Int -> Int$, que es el que queda en $S \setminus Q$, no puede aplicarse a un elemento de tipo $Bool$. La segunda condición se encarga de asegurar que las funciones que quedan en $S \setminus Q$ sean compatibles con algún valor del tipo del argumento.\\
+
+Lo ya explicado debería ser suficiente para entender las reglas de tipado presentadas en el apéndice \ref{apendice:tipos_tail} y tener una idea general de cómo podrían ser implementadas en un compilador real.\\
+
+%% SUBSECTION
+\section{Turing-completitud}
+
+Una vez formalizados los elementos clave de \textit{tail} estamos en posición de demostrar ciertas propiedades. Las que trataremos en este trabajo serán su capacidad expresiva, mediante la demostración de que \textit{tail} es turing-completo, que abordaremos en esta sección, y la seguridad cuando utilizamos únicamente tipos estáticos.\\
+
+Conocer la capacidad expresiva que presenta el lenguaje que estás diseñando es algo fundamental, no porque necesariamente todos los lenguajes deban de ser turing-completos, de hecho algunos DSL se benefician de la simplicidad, sino porque conocer las limitaciones de lo que se pude programar en el sistema informa sobre su idoneidad como herramienta para ciertas tareas.\\
+
+La demostración de que \textit{tail} es turing-completo es prácticamente trivial, basta con darse cuenta de que se puede construir un isomorfismo entre el cálculo lambda y un subconjunto de \textit{tail} que solamente utilice la expresión $\<lambda>$. La demostración podría quedarse aquí, pero dado que el principal objetivo de este trabajo es la introducción en técnicas de diseño de lenguajes, me parece conveniente utilizar una vía demostración alternativa que es más fácilmente generalizable a lenguajes sin funciones lambda. Este método consiste en demostrar que el conjunto las funciones recursivas (o $\mu$-recursivas), como se describen en \cite{cutland_computability_1980}, son codificables en \textit{tail}. Dado que mediante estas funciones se puede calcular lo mismo que con una máquina de turing estaríamos demostrando que \textit{tail} es turing-completo.\\
+
+La clase de las funciones $\mu$-recursivas está generada por tres tipos de funciones:\\
+
+\begin{enumerate}
+  \item Las funciones constantes para cualquier $n$ y $k$ $\in \mathbb{N}$.
+  \begin{equation*}
+  \begin{aligned}[c]
+  &f \colon \mathbb{N}^k \to \mathbb{N}\\
+  &f(x_1,...,x_k) \mapsto n \\
+  \end{aligned}
+  \end{equation*}
+  
+  \item La función sucesor de un número natural.
+  \begin{equation*}
+  \begin{aligned}[c]
+  &S \colon \mathbb{N} \to \mathbb{N}\\
+  &S(x) \mapsto x + 1 \\
+  \end{aligned}
+  \end{equation*}
+  
+  \item Las funciones proyección para cualquier $i$ y $k$ $\in \mathbb{N}$ con $1 \leq i \leq k$.
+  \begin{equation*}
+  \begin{aligned}[c]
+  &P_i^k \colon \mathbb{N}^k \to \mathbb{N}\\
+  &P_i^k(x_1, ..., x_k) \mapsto x_i \\
+  \end{aligned}
+  \end{equation*}
+  
+\end{enumerate}
+
+Junto con tres operadores que actúan sobre estas funciones.\\
+
+\begin{enumerate}
+  \item El operador de composición ($\circ$), que dada una función $h(x_1, ..., x_m)$ y $m$ funciones $g_i(x_1, ..., x_k)$ se define como:\\
+  $$(h \circ (g_1, ..., g_m))(x_1, ..., x_k) = h(g_1(x_1, ..., x_k), ..., g_m(x_1, ..., x_k))$$
+  
+  \item El operador de recursión primitiva ($\rho$), que dadas dos funciones $g(x_1, ..., x_k)$ y $h(y,z,x_1, ..., x_k)$ se define como:\\.
+  \begin{align*}
+  &\rho(g, h)(0, x_1, ..., x_k) = g(x_1, ..., x_k)\\
+  &\rho(g, h)(y+1, x_1, ..., x_k) = h(y, \rho(g, h)(y, x_1, ..., x_k), x_1, ..., x_k)
+  \end{align*}
+  
+  \item El operador de minimización ($\mu$), que dada una función $f(y, x_1, ..., x_k)$ se define como:\\
+\[
+\mu(f)(x_1, ..., x_k) = z \Leftrightarrow
+  \begin{cases}
+    f(z, x_1, ..., x_k) = 0\\
+    f(i, x_1, ..., x_k) > 0 &\forall\ 0 \leq i \leq z-1
+  \end{cases}
+\]
+  
+\end{enumerate}
+
+Veamos entonces que tanto las funciones generadoras como los operadores se pueden codificar en \textit{tail}.\\
+
+Empezamos por la función constante, que fijado un $k$ y un $n$ en \textit{tail} es fácilmente expresable como:\\
+\begin{lstlisting}[style=tail]
+f(x_1, ..., x_k) := n
+\end{lstlisting}
+
+Tenemos que demostrar, usando las reglas presentes en el apéndice \ref{apendice:evaluacion_tail}, que la siguiente expresión evalúa a $n$.\\
+\begin{lstlisting}[style=tail]
+f(a_1, ..., a_k)
+\end{lstlisting}
+
+Esto requiere de una pequeña torre de reglas de evaluación, que concluyen en que efectivamente la función se comporta de la forma correcta.\\
+
+\begin{gather*}
+\inference[E-FuncSintSug:]{}{f(x_1, ..., x_k) := n -> f := \<lambda> x_1, ..., x_k.n} \\
+\inference[E-Assig:]{}{\Gamma |- f := \<lambda> x_1, ..., x_k.n} \\
+\inference[E-Var:]{}{f -> \<lambda> x_1, ..., x_k.n} \\
+\inference[E-AppRed:]{}{f(a_1, ..., a_k) -> \<lambda> x_1, ..., x_k.n(a_1, ..., a_k)} \\
+\inference[E-App:]{}{\<lambda> x_1, ..., x_k.n(a_1, ..., a_k) -> n}
+\end{gather*}
+\bigskip
+
+De forma similar demostramos que se puede implementar la función sucesor, aunque en este caso tenemos que confiar en que el operador ``+'' actúa de la forma esperada, la única forma de solventar esto sería especificar una axiomática de los naturales dentro de las reglas, algo que realmente no merece el esfuerzo que conlleva. Comprobamos entonces que la evaluación del siguiente fragmento de código produce el resultado deseado, en este caso $a + 1$.\\
+\begin{lstlisting}[style=tail]
+s(x) := x+1
+s(a)
+\end{lstlisting}
+\begin{gather*}
+\inference[E-FuncSintSug:]{}{s(x) := x+1 -> s := \<lambda> x.x+1} \\
+\inference[E-Assig:]{}{\Gamma |- s := \<lambda> x.x+1} \\
+\inference[E-Var:]{}{s -> \<lambda> x.x+1} \\
+\inference[E-AppRed:]{}{s(a) -> \<lambda> x.x+1(a)} \\
+\inference[E-App:]{}{\<lambda> x.x+1(a) -> a+1}
+\end{gather*}
+\bigskip
+
+Terminamos con las funciones básicas comprobando que la siguiente implementación de la proyección produce $a_i$ como resultado.\\
+\begin{lstlisting}[style=tail]
+pki(x_1, ..., x_k) := x_i
+pki(a_1, ..., a_k)
+\end{lstlisting}
+
+\begin{gather*}
+\inference[E-FuncSintSug:]{}{pki(x_1, ..., x_k) := x_i -> s := \<lambda> x_1, ..., x_k.x_i} \\
+\inference[E-Assig:]{}{\Gamma |- pki := \<lambda> x_1, ..., x_k.x_i} \\
+\inference[E-Var:]{}{pki -> \<lambda> x_1, ..., x_k.x_i} \\
+\inference[E-AppRed:]{}{pki(a_1, ..., a_k) -> \<lambda> x_1, ..., x_k.x_i(a_1, ..., a_k)} \\
+\inference[E-App:]{}{\<lambda> x_1, ..., x_k.x_i(a_1, ..., a_k) -> a_i}
+\end{gather*}
+\bigskip
+
+
+Empezamos ahora a demostrar que es posible implementar los operadores. A partir de este punto las demostraciones empiezan a ser mucho más pesadas y farragosas, y están presentes solo por motivos de completitud, sin pretender que aporten mucho valor, ya que simplemente observar el código que define los operadores es probablemente más convincente que una página llena de reglas lógicas.\\
+
+En el siguiente código se encuentra el operador de composición (o de sustitución). Recordamos su definición:\\
+
+$$(h \circ (g_1, ..., g_m))(x_1, ..., x_k) = h(g_1(x_1, ..., x_k), ..., g_m(x_1, ..., x_k))$$
+
+\begin{lstlisting}[style=tail]
+subs(h, g_1, ..., g_m) :=
+  lambda x_1, ..., x_k.
+    h(g_1(x_1, ..., x_k), ..., g_m(x_1, ..., x_k))
+  
+subs(s, t_1, ..., t_m)(a_1, ..., a_k)
+\end{lstlisting}
+
+Para hacer el código y la demostración un poco más legible, realizaremos un pequeño cambio de notación, considerando $x \equiv x_1, ..., x_k$, $a \equiv a_1, ..., a_k$, $g \equiv g_1, ..., g_m$ , $t \equiv t_1, ..., t_m$, $g(x) \equiv g_1(x_1, ..., x_k), ..., g_m(x_1, ..., x_k)$ y $t(x) \equiv t_1(x_1, ..., x_k), ..., t_m(x_1, ..., x_k)$. De esta forma el mismo código queda mucho más limpio:\\
+
+\begin{lstlisting}[style=tail]
+subs(h, g) := lambda x. h(g(x))
+subs(s, t)(a)
+\end{lstlisting}
+
+Comprobamos que la evaluación de $subs(s, t)(a)$ resulta en $s(t(a))$. Deshaciendo el camino de notación quedaría $s(t_1(a_1, ..., a_k), ..., t_m(a_1, ..., a_k))$, justo el resultado que queríamos.\\
+
+\begin{gather*}
+\inference[E-FuncSintSug:]{}{subs(h, g) := \<lambda>x.h(g(x)) -> subs := \<lambda>h,g.\<lambda>x.h(g(x))} \\
+\inference[E-Assig:]{}{\Gamma |- subs := \<lambda>h,g.\<lambda>x.h(g(x))} \\
+\inference[E-Var:]{}{subs -> \<lambda>h,g.\<lambda>x.h(g(x))} \\
+\inference[E-AppRed:]{}{subs(s, t) -> \<lambda>h,g.\<lambda>x.h(g(x))(s, t)} \\
+\inference[E-App:]{}{\<lambda>h,g.\<lambda>x.h(g(x))(s, t) -> \<lambda>x.s(t(x))}\\
+\inference[E-AppRed:]{}{\<lambda>h,g.\<lambda>x.h(g(x))(s,t)(a) -> \<lambda>x.s(t(x))(a)}\\
+\inference[E-App:]{}{\<lambda>x.s(t(x))(a) -> s(t(a))}
+\end{gather*}
+\bigskip
+
+Con el operador $\rho$ procedemos de manera similar. Recordemos que se define como:
+$$\rho(g, h)(0, x_1, ..., x_k) = g(x_1, ..., x_k)$$
+$$\rho(g, h)(y+1, x_1, ..., x_k) = h(y, \rho(g, h)(y, x_1, ..., x_k), x_1, ..., x_k)$$
+
+
+Realizamos la misma simplificación de la notación sobre las variables $x$ y $a$ e implementamos su funcionalidad en el siguiente fragmento de código.\\
+
+\begin{lstlisting}[style=tail]
+rho(g, h) :=
+  f(y, x) :=
+    if y = 0 then g(x)
+    else h(y-1, f(y-1, x), x)
+    
+rho(s, t)(b, a)
+\end{lstlisting}
+
+La evaluación de $rho(s, t)(b, a)$ resulta en ``$\<if> b=0 \<then> s(a) \<else> t(b-1, f(b-1, a), a)$'' y basta con comprobar el funcionamiento de las reglas (E-If) y (E-Else) del apéndice \ref{apendice:evaluacion_tail} para darse cuenta de que esta expresión encaja con la definición tanto en el caso $b=0$ como en el caso $b \neq 0$.\\
+
+
+\begin{gather*}
+\hspace{-1cm}
+\inference[E-FuncSintSug:]{}{\begin{array}{@{}c@{}}
+f(y, x) := \<if> y=0 \<then> g(x) \<else> h(y-1, f(y-1, x), x) ->\\
+f := \<lambda>x,y.\<if> y=0 \<then> g(x) \<else> h(y-1, f(y-1, x), x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-AssigRed:]{}{\begin{array}{@{}c@{}}
+rho(g, h) := f(y, x) := \<if> y=0 \<then> g(x) \<else> h(y-1, f(y-1, x), x) -> \\
+rho(g, h) := f := \<lambda>x,y.\<if> y=0 \<then> g(x) \<else> h(y-1, f(y-1, x), x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-Assig:]{}{\begin{array}{@{}c@{}}
+\Gamma |- f := \<lambda>x,y.\<if> y=0 \<then> g(x) \<else> h(y-1, f(y-1, x), x), \\
+f := \<lambda>x,y.\<if> y=0 \<then> g(x) \<else> h(y-1, f(y-1, x), x) -> \\
+\<lambda>x,y.\<if> y=0 \<then> g(x) \<else> h(y-1, f(y-1, x), x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-AssigRed:]{}{\begin{array}{@{}c@{}}
+rho(g, h) := f := \<lambda>x,y.\<if> y=0 \<then> g(x) \<else> h(y-1, f(y-1, x), x) -> \\
+rho(g, h) := \<lambda>x,y.\<if> y=0 \<then> g(x) \<else> h(y-1, f(y-1, x), x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-FuncSintSug:]{}{\begin{array}{@{}c@{}}
+rho(g, h) := \<lambda>x,y.\<if> y=0 \<then> g(x) \<else> h(y-1, f(y-1, x), x) -> \\
+rho := \<lambda> g, h.\<lambda>x,y.\<if> y=0 \<then> g(x) \\
+\<else> h(y-1, f(y-1, x), x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-Assig:]{}{\begin{array}{@{}c@{}}
+\Gamma |- rho := \<lambda> g, h.\<lambda>x,y.\<if> y=0 \<then> g(x)\\
+\<else> h(y-1, f(y-1, x), x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-Var:]{}{rho -> \<lambda> g, h.\<lambda>x,y.\<if> y=0 \<then> g(x) \<else> h(y-1, f(y-1, x), x)} \\
+\inference[E-AppRed:]{}{\begin{array}{@{}c@{}}
+rho(s, t) -> \<lambda> g, h.\<lambda>x,y.\<if> y=0 \<then> g(x)\\
+\<else> h(y-1, f(y-1, x), x)(s, t)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-App:]{}{\begin{array}{@{}c@{}}
+\<lambda> g, h.\<lambda>x,y.\<if> y=0 \<then> g(x) \<else> h(y-1, f(y-1, x), x)(s, t) -> \\
+\<lambda>x,y.\<if> y=0 \<then> s(x) \<else> t(y-1, f(y-1, x), x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-AppRed:]{}{\begin{array}{@{}c@{}}
+\<lambda> g, h.\<lambda>x,y.\<if> y=0 \<then> g(x)\\
+\<else> h(y-1, f(y-1, x), x)(s, t)(b, a) ->\\
+\<lambda>x,y.\<if> y=0 \<then> s(x) \<else> t(y-1, f(y-1, x), x)(b, a)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-App:]{}{\begin{array}{@{}c@{}}
+\<lambda>x,y.\<if> y=0 \<then> s(x) \<else> t(y-1, f(y-1, x), x)(b, a) -> \\
+\<if> b=0 \<then> s(a) \<else> t(b-1, f(b-1, a), a)
+\end{array}} \\
+\end{gather*}
+\bigskip
+
+
+Terminamos al fin con el operador $\mu$, definido como:
+
+\[
+\mu(f)(x_1, ..., x_k) = z \Leftrightarrow
+  \begin{cases}
+    f(z, x_1, ..., x_k) = 0\\
+    f(i, x_1, ..., x_k) > 0 &\forall\ 0 \leq i \leq z-1
+  \end{cases}
+\]
+
+Simplificando también la notación sobre las variables $x$ y $a$ obtenemos el siguiente código:\\
+
+\begin{lstlisting}[style=tail]
+mu(f) :=
+  loop(z, x) :=
+    if f(z, x) = 0 then z
+    else loop(z+1, x)
+  lambda x.loop(0, x)
+  
+mu(g)(a)
+\end{lstlisting}
+
+Aplicando las reglas de evaluación obtenemos la siguiente torre.\\
+
+\begin{gather*}
+\hspace{-1cm}
+\inference[E-FuncSintSug:]{}{\begin{array}{@{}c@{}}
+loop(z, x) := \<if> f(z,x)=0 \<then> z \<else> loop(z+1, x) ->\\
+loop := \<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-Seq:]{}{\begin{array}{@{}c@{}}
+loop(z, x) := \<if> f(z,x)=0 \<then> z \<else> loop(z+1, x); \<lambda> x.loop(0, x) ->\\
+loop := \<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x); \<lambda> x.loop(0, x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-AssigRed:]{}{\begin{array}{@{}c@{}}
+mu(f) := loop(z, x) := \<if> f(z,x)=0 \<then> z \<else> loop(z+1, x);\\ \<lambda> x.loop(0, x) ->\\
+mu(f) := loop := \<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x);\\ \<lambda> x.loop(0, x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-Assig:]{}{\begin{array}{@{}c@{}}
+\Gamma |- loop := \<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x),\\
+loop := \<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x) -> \\
+\<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-Seq:]{}{\begin{array}{@{}c@{}}
+loop := \<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x); \<lambda> x.loop(0, x) ->\\
+\<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x); \<lambda> x.loop(0, x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-AssigRed:]{}{\begin{array}{@{}c@{}}
+mu(f) := loop := \<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x);\\ \<lambda> x.loop(0, x) -> \\
+mu(f) := \<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x);\\ \<lambda> x.loop(0, x)
+\end{array}} \\
+\displaybreak
+\hspace{-1cm}
+\inference[E-SeqNext:]{}{\begin{array}{@{}c@{}}
+\<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x); \<lambda> x.loop(0, x) -> \\
+\<lambda> x.loop(0, x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-AssigRed:]{}{\begin{array}{@{}c@{}}
+mu(f) := \<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x);\\ \<lambda> x.loop(0, x) -> \\
+mu(f) := \<lambda> x.loop(0, x)
+\end{array}} \\
+\hspace{-1cm}
+\inference[E-FuncSintSug:]{}{mu(f) := \<lambda> x.loop(0, x) -> mu := \<lambda> f.\<lambda> x.loop(0, x)} \\
+\hspace{-1cm}
+\inference[E-Assig:]{}{\Gamma |- mu := \<lambda> f.\<lambda> x.loop(0, x)} \\
+\hspace{-1cm}
+\inference[E-Var:]{}{mu -> \<lambda> f.\<lambda> x.loop(0, x)} \\
+\hspace{-1cm}
+\inference[E-AppRed:]{}{mu(g) -> \<lambda> f.\<lambda> x.loop(0, x)(g)} \\
+\hspace{-1cm}
+\inference[E-AppRed:]{}{mu(g)(a) -> \<lambda> f.\<lambda> x.loop(0, x)(g)(a)} \\
+%\inference[E-Var:]{}{loop -> \<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x)}
+%\inference[E-App:]{}{\<lambda> x_1, ..., x_k.n(a_1, ..., a_k) -> n}
+\end{gather*}
+
+Tras este proceso obtenemos como resultado 
+$$\<lambda> f.\<lambda> x.loop(0, x)(g)(a)$$
+Recordemos que $loop$ está definido en el contexto como ``$\Gamma |- loop := \<lambda>z,x.\<if> f(z,x)=0 \<then> z \<else> loop(z+1, x)$'' y por lo tanto esta expresión puede desarrollarse indefinidamente. Esto hace referencia a la capacidad del lenguaje de generar bucles no acotados a través de la recursividad y depende exclusivamente de las operaciones contenidas dentro del bucle el que este termine o no. En este caso, podemos ver claramente que en el momento en que se cumpla la condición $g(z, a) = 0$ el bucle terminará dando como resultado $z$.\\
+
+
+\section{Seguridad}
+
+Continuamos demostrando que \textit{tail} es seguro, tal como lo hemos definido en el capítulo \ref{sect:sistemas_de_calculo}. Como ya se comentó en ese capítulo, la forma estándar de demostrar la seguridad de un lenguaje es demostrar su progreso y preservación, y eso es precisamente lo que vamos a hacer.\\
+
+Hay que tener en cuenta que en el grado en que \textit{tail} permite tipos graduales y en consecuencia es posible escribir un programa sin ningún tipo estático, \textit{tail} no puede ser seguro. Aún así, nuestro enfoque será demostrar que si solo usamos tipos estáticos \textit{tail} sí que es seguro, de esta manera podremos decir que cuanto más porcentaje de tipado estático exista en un programa, más seguro será.\\
+
+\begin{theorem}[Progreso de \textit{tail}]
+  Sea $t$ un término de tail cerrado y bien tipado de forma estática, entonces o bien $t$ es un valor o existe algún $t'$ tal que $t -> t'$.
+\end{theorem}
+
+\begin{proof}
+Procederemos por inducción sobre los subtérminos de $t$ al igual que en la demostración del teorema \ref{theo:prog_lambda}. Antes de nada podemos eliminar los casos donde $t$ es un término no cerrado, es decir, variables, asignaciones y anotaciones y los casos donde $t$ es un valor (constante numérica, constante true, constante false, constante string, átomo, función lambda, tupla, lista, vector, matriz, diccionario e instancia de una variant) por ser triviales. Comprobamos entonces los elementos restantes de la gramática.\\
+
+\begin{itemize}
+  \item \textbf{$t = (t')$:}\\
+  Si $t'$ es un valor podemos aplicar (E-Par). \\
+  Si $t'$ puede evaluarse a un $t''$ aplicamos (E-ParRed).\\
+  
+  \item \textbf{$t = t_1;t_2$:}\\
+  Si $t_1$ es un valor podemos aplicar (E-SeqNext). \\
+  Si $t_1$ puede evaluarse a un $t_1'$ aplicamos (E-Seq).\\
+  
+  \item \textbf{$t = t_1(t_2)$:}\\
+  Dado que $t$ es un término bien tipado, necesariamente $\o |- t_1 : T_{11} -> T_{12}$ y $\o |- t_2:T_{11}$, por lo tanto, necesariamente $t_1$ es o evalúa en una expresión $\<lambda> x.\overline{t}$, ya que es el único valor que puede ser tipado con un tipo flecha.\\
+  
+  Si $t_1$ puede evaluarse en un $t_1'$ aplicamos (E-AppRed).\\
+  Si $t_2$ puede evaluarse en $t_2'$ y $t_1$ es un valor (y por tanto una función lambda) podemos usar (E-AppParameterRed).\\
+  Si $t_1$ y $t_2$ son valores aplicamos (E-App).\\
+  
+  Notar que el uso de un operador $op$ es equivalente a llamar a la función $op(x)$ si es unario o $op(x_1, x_2)$ si es binario y podemos utilizar el mismo razonamiento. Algo similar ocurre si $t = t_1.t_2(t_3)$, que es azúcar sintáctico para $t_2(t_1, t_3)$ por la regla (E-MethodSintSug).\\
+  
+  \item \textbf{$t = \<match> t' \<with> t_{1i}\  - >\ t_{2_i}$:}\\
+  
+  Si $t'$ evalúa a $t''$ usamos (E-MatchRed).\\
+  Si $\exists\ i\ t.q\ t_{1i} -> t_{1i}'$ usamos (E-MatchPatternRed).\\
+  
+  Como $t$ está bien tipado los $t_{1i}$ solo pueden ser:\\
+  
+  \begin{itemize}
+    \item Valores con un operador $\cdot=\cdot \colon T_{1i}, T_{1i} -> Bool$ definido, en este caso usamos (E-MatchEqual).\\
+    \item Deconstructores de tuplas de la forma $x_1, ..., x_n$, en este caso usamos (E-MatchTuple).\\
+    \item Deconstructores de listas de la forma $<x \mid \overline{x}>$, en este caso usamos (E-MatchList).\\
+    \item Deconstructores de variants de la forma $V::C(x_1, ..., x_n)$, en este caso usamos (E-MatchVariant).\\
+    \item El caracter ``\_'', en este caso usamos (E-MatchAny).\\
+  \end{itemize}
+  
+  \item \textbf{$t = \<if> t_{11} \<then> t_{12} \<else> t_2$:}\\
+  Si $t_{11}$ se puede evaluar en $t'_{11}$ usamos (E-IfRed).\\
+  
+  Si $t_{11}$ es un valor, dado que $t$ está bien tipado, necesariamente \mbox{$\o |- t_{11} : Bool$} y por tanto $t_{11}$ solo puede ser $True$ o $False$.\\
+  Si $t_{11} = True$ usamos (E-If).\\
+  Si $t_{11} = False$ usamos (E-Else).\\
+  
+   \item \textbf{$t = t_1.t_2$:}\\
+   Si $t_1$ se puede evaluar en $t'_1$ usamos (E-DotRed).\\
+   Si $t_1$ es un valor, como $t$ está bien tipado, $t_1$ debe ser la instancia de una variant, y por tanto podemos aplicar (E-ProjectionVariant).\\
+\end{itemize}
+\end{proof}
+
+\bigskip
+
+En el caso del teorema de preservación tenemos que cambiar el enunciado con respecto al teorema \ref{theo:pres_lambda}, ya que en el cálculo lambda simplemente tipado no existe una relación de subtipado. Sin embargo el siguiente teorema sigue cumpliendo la condición necesaria de un teorema de preservación, es decir, que si $t$ está bien tipado y $t -> t'$ entonces $t'$ también está bien tipado.\\
+
+\begin{theorem}[Preservación de \textit{tail}]
+\label{theo:pres_tail}
+  Sea $t$ un término de tail cerrado y bien tipado estáticamente con $\Gamma |- t:T$ y $t -> t'$ entonces $\Gamma |- t':T'$ con $T' \leq T$.
+\end{theorem}
+
+\begin{proof}
+La demostración sigue exactamente el mismo patrón que vimos en el capítulo \ref{sect:sistemas_de_calculo}. Debido a que \textit{tail} tiene muchas más posibles derivaciones que el cálculo lambda simplemente tipado se han omitido las reglas que concluyen directamente que $t$ es un valor. Además se aprovecha la naturaleza esquemática de la demostración utilizando el siguiente formato:\\
+
+\begin{itemize}
+  \item \textbf{(ReglaDeTipado):}
+  Consecuencias de que $t:T$ sea tipado con esta regla.\\
+  
+  \begin{itemize}
+    \item \textbf{(ReglaDeEvaluación):}
+    Consecuencias de que $t -> t'$ sea evaluado con esta regla.\\
+  \end{itemize}
+\end{itemize}
+
+A partir de ahora la variable $T$ hará referencia al tipo de $t$ y la variable $t'$ al resultado de la evaluación de $t$.\\
+
+\begin{itemize}
+  \item \textbf{(T-TypeDec):}\\
+    $t = t_1:T_1$\\
+    $t_1:T_1$\\
+    $T = T_1$\\
+  
+  \begin{itemize}
+    \item \textbf{(E-TypeDec):}\\
+      $t -> t_1 \Rightarrow t':T_1 = T$\\
+  \end{itemize}
+  
+  
+  \item \textbf{(T-Assig):}\\
+  $t = x \<:=> t_1$\\
+  $t_1 : T_1$\\
+  $x : T_2$\\
+  $T_1 \leq T_2$\\
+  $T = T_2$\\
+  
+  \begin{itemize}
+    \item \textbf{(E-AssigRed):}\\
+    $t_1 -> t'_1 \Rightarrow t'_1 : T'_1 \leq T_1 \leq T_2$\\
+    $t -> x := t'_1$, usando (T-Assig) tenemos que $t':T_2 = T$\\
+    
+    \item \textbf{(E-Assig):}\\
+    $t_1 = v$\\
+    $t -> v \Rightarrow t':T_1 \leq T$\\
+  \end{itemize}
+  
+  
+  \item \textbf{(T-Typeof):}\\
+  $t = \<typeof> t_1$\\
+  $t_1:T_1$\\
+  $T = String$\\
+  
+  \begin{itemize}
+    \item \textbf{(E-Typeof):}\\
+    $t -> string(T_1) \Rightarrow t':String = T$\\
+  \end{itemize}
+  
+  
+  \item \textbf{(T-App):}\\
+  $t = f(t_1)$\\
+  $f : T_f \leq \mathbb{0} -> U$\\
+  $t_1:T_1 \leq dom(T_f)$\\
+  $T = T_f \circ T_1$\\
+  
+  \begin{itemize}
+    \item \textbf{(E-AppRed):}\\
+    $f -> f' \Rightarrow f' : T_f' \leq T_f \Rightarrow dom(T'_f) \geq dom(T_f) \geq T_1$\\
+    $t -> f'(t_1)$, usando (T-App) $t':T'_f \circ T_1 \leq T_f \circ T_1$\\
+    
+    \item \textbf{(E-AppParameterRed):}\\
+    $t_1 -> t'_1 \Rightarrow t'_1 : T'_1 \leq T_1 \leq dom(T_f)$\\
+    $f(t_1) -> f(t'_1)$, usando (T-App) tenemos que $t':T_f \circ T'_1 \leq T_f \circ T_1$\\
+    
+    \item \textbf{(E-App):}\\
+    Como $f$ es un valor y $T_f \leq \mathbb{0} -> U$ entonces $f = \<lambda> x. \overline{t}$ y por (T-Lambda) $\Gamma, x:T_x |- \overline{t} : T_{\overline{t}}$\\
+    $t_1 = v$\\
+    $t -> [x |-> v] \overline{t} \Rightarrow t':T_{\overline{t}} \leq T_f \circ T_1$\\
+    
+  \end{itemize}
+  
+  
+  \item \textbf{(T-If):}\\
+  $t = \<if> t_1 \<then> t_2 \<else> t_3$\\
+  $t_1 : Bool$\\
+  $t_2 : T_2$\\
+  $t_3 : T_3$\\
+  $T = T_2 \<or> T_3$\\
+  
+  \begin{itemize}
+    \item \textbf{(E-IfRed):}\\
+    $t_1 -> t'_1 \Rightarrow t'_1 : T'_1 \leq T_1$\\
+    $t -> \<if> t'_1 \<then> t_2 \<else> t_3$, usando (T-If) tenemos que \mbox{$t': T_2 \<or> T_3 = T$}\\
+    
+    \item \textbf{(E-If):}\\
+    $t_1 = True$\\
+    $t -> t_2 \Rightarrow t': T_2 \leq T_2 \<or> T_3$\\
+    
+    \item \textbf{(E-Else):}\\
+    $t_1 = False$\\
+    $t -> t_3 \Rightarrow t': T_3 \leq T_2 \<or> T_3$\\
+  \end{itemize}
+  
+  
+  \item \textbf{(T-Seq):}\\
+  $t = t_1;t_2$\\
+  $t_1:T_1$\\
+  $t_2:T_2$\\
+  $T = T_2$\\
+  
+  \begin{itemize}
+    \item \textbf{(E-Seq):}\\
+    $t_1 -> t'_1$\\
+    $t -> t'_1;t_2$, usando (T-Seq) tenemos que $t':T_2 = T$\\
+    
+    \item \textbf{(E-SeqNext):}\\
+    $t_1 = v$\\
+    $t -> t_2 \Rightarrow t':T_2 = T$\\
+  \end{itemize}
+  
+  
+  \item \textbf{(T-Par):}\\
+  $t = (t_1)$\\
+  $t_1:T_1$\\
+  $T = T_1$\\
+  
+  \begin{itemize}
+    \item \textbf{(E-Par):}\\
+    $t -> t_1 \Rightarrow t':T_1 = T$\\
+  \end{itemize}
+  
+  
+  \item \textbf{(T-Block):}\\
+  $t = BeginBlock\ t_1\ EndBlock$\\
+  $t_1:T_1$\\
+  $T = T_1$\\
+  
+  \begin{itemize}
+    \item \textbf{(E-Block):}\\
+    $t -> t_1 \Rightarrow t':T_1 = T$\\
+  \end{itemize}
+  
+  
+  \item \textbf{(T-ProjectionVariant):}\\
+  $t = V::C_i(t_{i1}, ..., t_{in}).x_{ik}$\\
+  $t_{ij}:T_{ij}$\\
+  $T = T_{ik}$\\
+  
+  \begin{itemize}
+    \item \textbf{(E-ProjectionVariant):}\\
+    $t -> t_{ik} \Rightarrow t':T_{ik} = T$\\
+  \end{itemize}
+  
+  
+  \item \textbf{(T-Match):}\\
+  $t = \<match> t_0 \<with> t_{1i} -> t_{2i}$\\
+  $t_0:T_0$
+  $t_{1i}:T_0$\\
+  $t_{2i}:T_i$\\
+  $\exists\ \cdot = \cdot:T_e$ con $T_0 \leq dom(T_e)$ y $T_e \circ T_0 = Bool$\\
+  $T = \bigvee_{i=1}^n T_i$\\
+  
+  \begin{itemize}
+    \item \textbf{(E-MatchRed):}\\
+    $t_0 -> t'_0 \Rightarrow t'_0:T'_0 \leq T_0 \leq dom(T_e)\ y\ T_e \circ T'_0 = Bool$\\
+    $t -> \<match> t'_0 \<with> t_{1i} -> t_{2i}$, usando (T-Match) tenemos que $t':\bigvee_{i=1}^n T_i = T$\\
+    
+    \item \textbf{(E-MatchPatternRed):}\\
+    $t_{ii} -> t'_{1i} \Rightarrow t'_{ii}:T'_0 \leq T_0$\\
+    $t -> \<match> t_0 \<with> t'_{1i} -> t_{2i}$, usando (T-Match) tenemos que $t':\bigvee_{i=1}^n T_i = T$\\
+    
+    \item \textbf{(E-MatchEqual):}\\
+    $t_0 = v_0$\\
+    $t_{1i} = v_i$\\
+    $v_j = v_0 y v_i \neq v_0\ \forall\ i = 1...j$\\
+    $t -> t_{2j} \Rightarrow t':T_j \leq \bigvee_{i=1}^n T_i$\\
+    
+    \item \textbf{(E-MatchAny):}\\
+    $t_0 = v_0$\\
+    $t_{1j} = \_$\\
+    $t -> t_{2j} \Rightarrow t':T_j \leq \bigvee_{i=1}^n T_i$\\
+  \end{itemize}
+  
+  El mismo razonamiento se puede usar sobre (T-MatchVariant), (T-MatchList) y (T-MatchTuple) utilizando (E-MatchVariant), (E-MatchList) y (E-MatchTuple) respectivamente en vez de (E-MatchEqual).\\
+\end{itemize}
+\end{proof}

@@ -1,0 +1,105 @@
+\chapter{Teoría de tipos}
+\label{sect:tt}
+
+Entre finales del siglo \rom{19} y principios del \rom{20} la teoría de conjuntos de Cantor, al mismo tiempo que experimentaba una expansión como formalismo en el que fundamentar las matemáticas, demostraba cierta inconsistencia en forma de paradojas. En 1899 el propio Cantor descubrió la primera, que se puede resumir como: Sea $T$ el cardinal del conjunto que contiene a todos los conjuntos, por como está definido, debería ser el mayor cardinal posible, sin embargo el Teorema de Cantor nos dice que $2^T > T$.\\
+
+Sería sin embargo, en mayor media, otra paradoja la que llevaría a Russell a desarrollar los primeros elementos de la teoría de tipos, con el objetivo de eliminarla. La famosa paradoja de Russell se puede enunciar como: Sea $A = \{X : X \notin X\}$, ante la pregunta de si $A \in A$, en caso de que $A \in A$ entonces $A \notin A$ y en caso de que $A \notin A$ entonces $A \in A$. Russell haría la observación, recogida en el principio del círculo vicioso, de que estas paradojas estaban causadas por permitir expresar un conjunto por comprensión sin limitar el hecho de que se pueda hacer referencia a si mismo. Esta idea dará forma a algunos fundamentos de la teoría, como la sustitución del conjunto que contiene a todos los conjuntos por una jerarquía de ``universos".\\
+
+Como es lógico la teoría ha sufrido un fuerte desarrollo desde la época de Russell, se ha aumentado y se han descubierto nuevos conceptos. La que nosotros estudiaremos será la llamada \textit{teoría de tipos de Martin-Löf} explicada en \textit{Homotopy Type Theory: Univalent Foundations of Mathematics} \cite{hottbook}.\\
+
+\section{Diferencias con la teoría de conjuntos}
+
+La principal diferencia de la teoría de tipos moderna con la teoría de conjuntos procede de la mirada particular
+que se le da a su principal elemento, los tipos. No se tratan solamente como una colección que reemplaza a los conjuntos, sino que, mientras que la teoría de conjuntos tiene que construirse en el marco de un sistema deductivo como la lógica de primer orden, en la teoría de tipos los mismos tipos pueden verse como proposiciones. De esta forma demostrar una proposición representada por el tipo $A$ pasa por construir un elemento del tipo $A$.\\
+
+Mientras que en la lógica de primer orden solo hay un tipo de sentencia, que una proposición dada tiene una demostración, la teoría de tipos cuenta con dos sentencias básicas. El análogo a ``$A$ tiene una demostración'' se escribe como ``$a : A$'' y se lee ``el término $a$ tiene tipo $A$''. Si $A$ representa una proposición se dice que $a$ es evidencia de $A$. Cuando $A$ se ve más como un conjunto que como una proposición $a:A$ es similar a $a \in A$ en la teoría de conjuntos, con una salvedad, en la teoría de conjuntos podemos considerar de forma separada el objeto $a$ sin tener en cuenta $A$, pero en la teoría de tipos todo elemento debe tener un tipo.\\
+
+La otra sentencia disponible en la teoría de tipos es $a \equiv b : A$ o simplemente $a \equiv b$, que puede ser pensada como ``$a = b$ por definición''. En contraste, dados $a, b : A$, también se puede formar el tipo $a =_A b$, que sería el equivalente a la proposición ``$a$ y $b$ son iguales''. Si existe algún elemento del tipo $a =_A b$ decimos que $a$ y $b$ son (proposicionalmente) iguales.\\
+
+Continuaremos presentando los tipos básicos de los que dispondremos y veremos la clara inspiración que toman de ellos los sistemas que encontramos normalmente en los lenguajes de programación.\\
+
+\section{Tipos principales}
+
+\subsection{Tipo función}
+
+Dados dos tipos $A$ y $B$ podemos construir el tipo $A -> B$ de las funciones con dominio $A$ y codominio $B$. ¿Cómo? Existen dos formas, por definición directa o usando una abstracción lambda.\\
+
+Por definición directa le damos a la función un nombre $f$ y expresamos $f : A -> B$ mediante la ecuación
+$$f(x) :\equiv \Phi$$
+Donde $\Phi$ es una expresión que puede involucrar a la variable $x$. Para que esta definición sea válida tenemos que demostrar que $\Phi:B$ si asumimos que $x:A$.\\
+
+Usar una abstracción lambda nos permite no tener que dar un nombre a la función. Escribiendo la expresión $\lambda(x:A).\Phi$ tendríamos la misma definición que hemos dado con $f$. Dado que $\lambda(x:A).\Phi$ es una función podemos aplicarla a un argumento $a:A$ mediante la regla $(\lambda x.\Phi)(a) \equiv \Phi'$ donde $\Phi'$ es $\Phi$ sustituyendo todas las ocurrencias de la $x$ por $a$.\\
+
+Para cualquier función $f:A->B$ podemos construir una función lambda $\lambda x.f(x)$ y dada la regla de aplicación podemos decir que $f \equiv (\lambda x.f(x))$. Esta igualdad nos da el principio de unicidad para los tipos función, mostrando que una función $f$ está determinada de forma única por sus valores. Esta igualdad también nos permite ver $f(x) :\equiv \Phi$ como $f :\equiv \lambda x.\Phi$.\\
+
+
+\subsection{Universos y familias}
+
+Un universo es un tipo cuyos elementos son tipos. Como se ha comentado antes si no tenemos cuidado al tratar con estos elementos podemos dar lugar a contradicciones. Para evitarlo rechazamos la existencia del universo de todos los tipos y en su lugar definimos una torre de universos $U_0:U_1:U_2:\dotsc$ donde cada $U_i$ es un elemento de $U_{i+1}$. Además si $A:U_i$ entonces también $A:U_{i+1}$. Escribiremos $A:U$ omitiendo el índice para denotar que $A$ es un tipo (i.e. reside en algún universo).\\
+
+Llamamos familias de tipos a las funciones $B : A -> U$, que devuelven un tipo dependiendo de un parámetro $a:A$. A estas funciones también se les llama tipos dependientes y se corresponden con las familias de conjuntos en la teoría de conjuntos. Notar que dadas las restricciones sobre los universos no puede construirse una familia como $\lambda(i:\mathbb{N}).U_i$ al no existir un universo lo suficientemente grande para ser su codominio.\\
+
+
+\subsection{Tipo de funciones dependientes}
+
+Los tipos función dependientes o tipos $\Pi$ son una generalización de los tipos función. Los elementos de estos tipos son funciones cuyo codominio varía dependiendo del elemento del dominio al que son aplicadas. Dado el tipo $A:U$ y la familia $B : A -> U$, podemos construir el tipo $\Pi_{(x:A)} B(x):U$ de funciones dependientes. Cuando aplicamos una función dependiente $f:\Pi_{(x:A)} B(x)$ a un argumento $a:A$ obtenemos un elemento $f(a):B(a)$.\\
+
+En el caso de las funciones dependientes también tenemos un principio de unicidad con $f \equiv (\lambda x.f(x))$ para todo $f:\Pi_{(x:A)} B(x)$.\\
+
+
+\subsection{Tipo producto}
+
+Dados los tipos $A,B:U$ denotamos al tipo de su producto cartesiano como $A \times B : U$. Teniendo un elemento $a:A$ y otro $b:B$ podemos construir el par $(a, b) : A \times B$. Para poder usar funciones sobre los pares introducimos una nueva regla: para cualquier $g : A -> (B -> C)$ podemos definir una función $f : A \times B -> C$ mediante $f((a, b)) :\equiv (g(a))(b)$.\\
+
+La proyección sobre un tipo producto se define mediante las funciones:\\
+
+\begin{align*}
+  pr_1 \colon A \times B &\to A\\
+  pr_1((a, b)) &:\equiv a\\
+\end{align*}
+
+\begin{align*}
+  pr_2 \colon A \times B &\to B\\
+  pr_2((a, b)) &:\equiv b\\
+\end{align*}
+
+Como alternativa podemos usar una función dependiente y obtener las proyecciones como casos particulares.\\
+
+\begin{align*}
+  rec_{A\times B} \colon \Pi_{C:U} (A \to B \to C) &\to A \times B \to C\\
+  rec_{A\times B}(C, g, (a, b)) &:\equiv g(a)(b)\\
+\end{align*}
+
+\begin{align*}
+  &pr_1 :\equiv rec_{A\times B}(A, \lambda a.\lambda b.a)\\
+  &pr_2 :\equiv rec_{A\times B}(B, \lambda a.\lambda b.b)\\
+\end{align*}
+
+
+\subsection{Tipo de pares dependientes}
+De la misma forma que el tipo de funciones dependientes generalizaba el tipo función, el tipo de pares dependientes generaliza el tipo producto permitiendo que el tipo del segundo elemento del par pueda variar en función del primer elemento. Dado el tipo $A:U$ y una familia $B : A->U$ denotamos al tipo de pares dependientes como $\sum_{(x:A)} B(x):U$. Dado un elemento $a:A$ y otro $b:B(a)$ podemos construir $(a, b) : \sum_{(x:A)} B(x):U$.\\
+
+De la misma forma que para definir funciones sobre un tipo $A \times B$ usábamos una función auxiliar $g : A -> B -> C$, en este caso tendremos que para cualquier $g : \Pi_{(x:A)}B(x) -> C$ podemos definir una $f : (\sum_{(x:A)} B(x)) -> C$ como $f((a, b)) :\equiv g(a)(b)$.\\
+
+Los tipos de pares dependientes se suelen utilizar para construir estructuras matemáticas. Por ejemplo, definimos un magma como un par ($A$, $m$) siendo $A:U$ un tipo y $m : A -> A -> A$ un operador binario. Dado que el tipo de $m$ depende de $A$ estamos ante un par dependiente. De esta manera podemos definir el tipo de los magmas como $Magma :\equiv \sum_{A:U} (A -> A -> A)$.\\
+
+\subsection{Tipo de los booleanos}
+Por último, y como ejemplo de un tipo más básico, introduciremos el tipo de los booleanos, escrito como $\textbf{2}:U$. Únicamente existen dos elementos con este tipo $0_2$ y $1_2$.\\
+
+Para definir una función $f : \textbf{2} -> C$ necesitamos dos elementos $c_0, c_1:C$ para usar en las ecuaciones\\
+$$f(0_2) :\equiv c_0$$
+$$f(1_2) :\equiv c_1$$
+
+También podemos definir mediante una función dependiente el equivalente a un if-then-else en un lenguaje de programación:\\
+
+\begin{align*}
+  rec_2 \colon \Pi_{C:U} C ->  C -> C &\to \textbf{2} -> C\\
+  rec_2(C, c_0, c_1, 0_2) &:\equiv c_0\\
+  rec_2(C, c_0, c_1, 1_2) &:\equiv c_1\\
+\end{align*}
+
+
+\section{De la teoría de tipos a los sistemas de tipos}
+Es innegable que la teoría de tipos ha tenido gran influencia en las ciencias de la computación y en especial en el diseño de lenguajes de programación. Varios de los tipos mentados anteriormente presentan su análogo en los lenguajes más conocidos: en \textit{C} una función ``\textit{bool f(bool a, bool b);}'' estaría tipada como $f : \textbf{2} -> \textbf{2} -> \textbf{2}$ y un elemento ``\textit{'(a b)}'' de \textit{Lisp} es exactamente del tipo $A \times B$. Con respecto a las funciones y los pares dependientes han sido la inspiración para un sistema de tipos novedoso \textit{llamado sistema de tipos dependientes} que se puede encontrar en lenguajes experimentales como \textit{Idris} y que aspira a dar total libertad a la hora de elegir como de restrictivo quieres que sea el tipado de un programa.\\
+
+Nos adentramos entonces en la parte de la teoría de tipos más aplicada, donde nos centraremos en como definir los tipos en los que estamos interesados, combinarlos en un sistema concreto, estudiar como se comporta y demostrar que tiene buenas propiedades. En este punto es fundamental el libro de Benjamin C.Pierce \textit{Types and Programming Languages} \cite{TPL}. En él se desarrolla la imagen especular de los tipos ya vistos y alguno más que nos hemos dejado en el tintero, esta vez poniendo énfasis en cómo definir su funcionamiento y de que forma introducirlos en un lenguaje.\\

@@ -1,0 +1,139 @@
+\section{Reglas de tipado de tail.}
+\label{apendice:tipos_tail}
+
+\begin{figure}[p]
+\caption{Reglas de tipado de tail.}
+\label{fig:tiptail}
+
+\bigskip
+\bigskip
+
+\inference[T-Basic:]{}{\Gamma |- c:B(c)}
+
+\bigskip
+
+\inference[T-TypeDec:]{t:\tau \in \Gamma}{
+\begin{array}{@{}c@{}}
+\Gamma |- t : \tau\\
+\Gamma |- (t:\tau) : \tau
+\end{array}}
+
+\bigskip
+
+\inference[T-Assig:]{\Gamma |- t:\tau_1, \Gamma |- x:\tau_2, \tau_1 ~< \tau_2\ \acute{o}\ \tau_2 = ?}{\Gamma |- x \<:=> t : \tau_2}
+
+\bigskip
+
+\inference[T-Typeof:]{\Gamma |- t:\tau}{\Gamma |- \<typeof> t : String}
+
+\bigskip
+
+\inference[T-App:]
+{\Gamma |- f:\tau_1, \Gamma |- t:\tau_2, \tau_1 ~< \mathbb{0} -> \mathbb{1}, \tau_2 ~< \widetilde{dom}(\tau_1)}
+{\Gamma |- f(t) : \tau_1 \widetilde{\circ} \tau_2}
+
+\bigskip
+
+\inference[T-Lambda:]
+{\Gamma, x:\tau_1 |- \overline{t}:\tau_2}
+{\Gamma |- \<lambda> x.\overline{t} : \tau_1 -> \tau_2}
+
+\bigskip
+
+\inference[T-If:]
+{\Gamma |- t_1 : Bool, \Gamma |- t_2:\tau_2, \Gamma |- t_3:\tau_3}
+{\Gamma |- \<if> t_1 \<then> t_2 \<else> t_3 : \tau_2 \vee \tau_3}
+
+\bigskip
+
+\inference[T-Seq:]
+{\Gamma |- t1:\tau_1, \Gamma |- t2:\tau_2}
+{\Gamma |- t1\<;>t2 : \tau_2}
+
+\bigskip
+
+\inference[T-Par:]{\Gamma |- t:\tau}{\Gamma |- (t):\tau}
+
+\bigskip
+
+\inference[T-Block:]{\Gamma |- t:\tau}{\Gamma |- BeginBlock\ t\ EndBlock : \tau}
+
+\bigskip
+
+\inference[T-VariantConstructor:]{\<variant> V::C_i({x_{ij} : \tau_{ij}}^{j \in 1...r_i})^{i \in 1...n} \in \Gamma}
+{\Gamma |- V::C_i(t_{i1}, ..., t_{in}) : V}
+
+\bigskip
+
+\inference[T-ProjectionVariant:]{\<variant> {V::C_i(x_{ij} : \tau_{ij}}^{j \in 1...r_i})^{i \in 1...n} \in \Gamma \\
+\Gamma |- t_{ij} : \tau_{ij}\ \ j \in 1...r_i}
+{\Gamma |- V::C_i(t_{i1}, ..., t_{in}).x_{ik} : \tau_{ik}}
+
+\bigskip
+
+\inference[T-Match:]{
+\Gamma |- t_0 : \tau\ t.q\ \exists\ \cdot=\cdot\ : \tau_e \in \Gamma\ con\ \tau_e ~< \mathbb{0} -> U,\ \tau ~< \widetilde{dom}(\tau_e)\ y\ \tau_e \widetilde{\circ} \tau = Bool\\
+\Gamma |- t_{1i}:\tau,\ \Gamma |- t_{2i} : \tau_i}
+{\Gamma |- \<match> t_0 \<with>\ t_{1i} \mathligsoff -> \mathligson\ t_{2i} : \bigvee_{i=1}^n \tau_i}
+
+\bigskip
+
+\inference[T-MatchVariant:]{
+\<variant> V::C_i({x_{ij} : \tau_{ij}}^{j \in 1...r_i})^{i \in 1...n} \in \Gamma \\
+\Gamma |- t_0 : V\ \ \Gamma, x_{ij}:\tau_{ij} |- t_i : \tau_i}
+{\Gamma |- \<match> t_0 \<with>\ V::C_i(x_{i1}, ..., x_{ir_i})\ \mathligsoff -> \mathligson\ t_i : \bigvee_{i=1}^m \tau_i}
+
+\end{figure}
+
+
+\begin{figure}[p]
+
+\bigskip
+\bigskip
+
+\inference[T-Tuple:]
+{\Gamma |- t_i : \tau_i\ i \in 1...n}
+{\Gamma |- {t_i}^{i \in 1...n} : {\tau_i}^{i \in 1...n}}
+
+
+\bigskip
+
+\inference[T-MatchTuple:]{
+\Gamma |- t_0 : {\tau_{0i}} ^ {i \in 1...n}\ \
+\Gamma, x_i:\tau_{0i} |- t_{2i} : \tau_i}
+{\Gamma |- \<match> t_0 \<with>\ x_1, ..., x_m\ \mathligsoff -> \mathligson\ t_{2i} : \bigvee_{i=1}^m \tau_i}
+
+
+\bigskip
+
+\inference[T-List:]
+{\Gamma |- t_i : \tau\ i \in 1...n}
+{\Gamma |- <{t_i}^{i \in 1...n}> : List \<of> \tau}
+
+
+\bigskip
+
+\inference[T-MatchList:]{
+\Gamma |- t_0 : List \<of> \tau \\
+\Gamma, x_i:\tau, \overline{x}_i : List \<of> \tau |- t_i : \tau_i}
+{\Gamma |- \<match> t_0 \<with>\ <x_i \mid \overline{x}_i>\ \mathligsoff -> \mathligson\ t_i : \bigvee_{i=1}^n \tau_i}
+
+\bigskip
+
+\inference[T-Vector:]
+{\Gamma |- t_i : \tau\ i \in 1...n}
+{\Gamma |- [{t_i}^{i \in 1...n}] : Vector \<of> \tau}
+
+\bigskip
+
+\inference[T-Matrix:]
+{\Gamma |- t_i : \tau\ i \in 1...n,\ j \in 1...m}
+{\Gamma |- [{t_{ij}}^{\stackrel{i \in 1...n}{j \in 1...m}}] : Matrix \<of> \tau}
+
+\bigskip
+
+\inference[T-Dictionary:]
+{\Gamma |- t_i : \tau,\ \Gamma |- \overline{t}_i : \overline{\tau}\ i \in 1...n}
+{\Gamma |- {t_i => \overline{t}_i}^{i \in 1...n} : Dictionary \<of> \tau, \overline{\tau}}
+
+\end{figure}

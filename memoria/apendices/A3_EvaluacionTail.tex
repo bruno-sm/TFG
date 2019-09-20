@@ -1,0 +1,250 @@
+\section{Reglas de evaluación de tail.}
+\label{apendice:evaluacion_tail}
+
+\begin{figure}[p]
+\caption{Reglas de evaluación de tail.}
+\label{fig:evtail}
+
+\bigskip
+\bigskip
+
+\inference[E-AssigRed:]{t -> t'}{x \<:=> t -> x \<:=> t'}
+
+\bigskip
+
+\inference[E-Assig:]
+{x \<:=> v}
+{\begin{array}{@{}c@{}}
+\Gamma |- x \<:=> v \\
+x\<:=>v -> v
+\end{array}}
+
+\bigskip
+
+\inference[E-Var:]{\Gamma |- x \<:=> v}{x -> v}
+
+\bigskip
+
+\inference[E-TypeDec:]{}{t:\tau -> t}
+
+\bigskip
+
+\inference[E-Typeof:]{\Gamma |- t : \tau}{\<typeof> t -> string(\tau)}
+
+\bigskip
+
+\inference[E-FuncSintSug:]{}{f(x) := t -> f := \<lambda> x.t}
+
+\bigskip
+
+\inference[E-App:]{}{\<lambda> x . t (v) -> [x |-> v]t}
+
+\bigskip
+
+\inference[E-AppParameterRed:]{t -> t'}{\<lambda> x . \overline{t} (t) -> \<lambda> x . \overline{t} (t')}
+
+\bigskip
+
+\inference[E-AppRed:]{t_1 -> t_1'}{t_1(t_2) -> t_1'(t_2)}
+
+\bigskip
+
+\inference[E-If:]{}{\<if> True \<then> t_1 \<else> t_2 -> t_1}
+
+\bigskip
+
+\inference[E-Else:]{}{\<if> False \<then> t_1 \<else> t_2 -> t_2}
+
+\bigskip
+
+\inference[E-IfRed:]{t_1 -> t_1'}{\<if> t_1 \<then> t_2 \<else> t_3 -> \<if> t_1' \<then> t_2\ \<else> t_3}
+
+\bigskip
+
+\inference[E-Seq:]{t_1 -> t_1'}{t_1 \<;> t_2 -> t_1' \<;> t_2}
+
+\bigskip
+
+\inference[E-SeqNext:]{}{v \<;> t -> t}
+
+\bigskip
+
+\inference[E-ParRed:]{t -> t'}{(t) -> (t')}
+
+\bigskip
+
+\inference[E-Par:]{}{(v) -> v}
+
+\bigskip
+
+\inference[E-BlockRed:]
+{t -> t'}
+{
+\Gamma' := \Gamma, \\
+BeginBlock\ t\ EndBlock ->_{\Gamma'} BeginBlock\ t'\ EndBlock
+}
+
+\bigskip
+
+\inference[E-Block:]{}{BeginBlock\ v\ EndBlock -> v}
+
+\end{figure}
+
+
+\begin{figure}[p]
+
+\bigskip
+\bigskip
+
+\inference[E-String:]{}{``v^s \{v\} t^s" -> ``v^s" + string(v) + ``t^s"}
+
+\bigskip
+
+\inference[E-StringRed:]{t -> t'}{``v^s \{t\} t^s" -> ``v^s \{t'\} t^s"}
+
+\inference[E-SubTypeTrue:]{\tau_1 ~< \tau_2}{\tau_1 \<<:> \tau_2 -> True}
+
+\bigskip
+
+\inference[E-SubTypeFalse:]{\tau_1 \ \widetilde{\nleq}\ \tau_2}{\tau_1 \<<:> \tau_2 -> False}
+
+\bigskip
+
+\inference[E-VariantDec:]{}{
+\begin{array}{@{}c@{}}
+\<variant> V \<::> C_1(l_{1 1} : \tau_{11}, ..., l_{1r_1} : \tau_{1r_1}) \mid ... \mid C_n(l_{n 1} : \tau_{n 1}, ..., l_{nr_n} : \tau_{nr_n}) -> \\
+-> <{V::C_i(l_{ij} : \tau_{ij}}^{j \in 1...r_i})^{i \in 1...n}> \\
+\Gamma |- V := {V::C_i({l_{ij} : \tau_{ij}}^{j \in 1...r_i})}^{i \in 1...n}
+\end{array}}
+
+\bigskip
+
+\inference[E-VariantConstruct:]{\Gamma |- V := {V::C_i(l_{ij} : \tau_{ij}}^{j \in 1...r_i})^{i \in 1...n}}{
+\begin{array}{@{}c@{}}
+\Gamma |- V::C_i := \lambda x_1, ..., x_{r_i}.V::C_i(l_{ij} : \tau_{ij}^{j \in 1 ... r_i})^{i \in 1...n}
+\end{array}}
+
+\bigskip
+
+\inference[E-ProjectionVariant:]{
+\<variant> {V::C_i(x_{ij} : \tau_{ij}}^{j \in 1...r_i})^{i \in 1...n} \in \Gamma
+}{
+V::C_i(t_{i1}, ..., t_{in}).x_{ik} -> t_{ik}
+}
+
+\bigskip
+
+\inference[E-DotRed:]{t_1 -> t'_1}{t_1.x -> t'_1.x}
+
+\bigskip
+
+\inference[E-MethodSintSug:]{}{t_1.t_2(t_3) -> t_2(t_1, t_3)}
+
+\bigskip
+
+\inference[E-MatchRed:]{t_0 -> t'_0}{
+\begin{array}{@{}c@{}}
+\<match> t_0 \<with>\ t_{1i}\ \mathligsoff -> \mathligson\ t_{2i} -> \\
+->\ \<match> t'_0 \<with>\ t_{1i}\ \mathligsoff -> \mathligson\ t_{2i}
+\end{array}}
+
+\bigskip
+
+\inference[E-MatchPatternRed:]{t_{1i} -> t'_{1i}}{
+\begin{array}{@{}c@{}}
+\<match> v \<with>\ t_{1i}\ \mathligsoff -> \mathligson\ t_{2i} -> \\
+->\ \<match> v \<with>\ t'_{1i}\ \mathligsoff -> \mathligson\ t_{2i}
+\end{array}}
+
+\bigskip
+
+\inference[E-MatchEqual:]{v_i=v_0\ y\ v_j \neq v_0\ \forall\ 0 < j < i}{
+\begin{array}{@{}c@{}}
+\<match>\ v_0 \<with> v_i\ \mathligsoff -> \mathligson\ t_i -> t_i
+\end{array}}
+
+\bigskip
+
+\inference[E-MatchAny:]{}{
+\begin{array}{@{}c@{}}
+\<match>\ v \<with> \_\ \mathligsoff -> \mathligson\ t_i -> t_i
+\end{array}}
+
+\bigskip
+
+\inference[E-MatchVariant:]{}{
+\begin{array}{@{}c@{}}
+\<match>\ V::C_i(v_1, ..., v_n) \<with>\\
+V::C_i(x_1, ..., x_n)\ \mathligsoff -> \mathligson\ t_i -> [x_i |-> v_i]t_i
+\end{array}}
+
+\bigskip
+
+\end{figure}
+
+
+\begin{figure}[p]
+
+\bigskip
+\bigskip
+
+\inference[E-Tuple:]
+{t_j -> t'_j}
+{v_i^{i \in 1...j-1}, t_j, t_k^{k \in j+1...n} -> v_i^{i \in 1...j-1}, t'_j, t_k^{k \in j+1...n}}
+
+\bigskip
+
+\inference[E-AssigTuple:]
+{}
+{x_i^{i \in 1...n} := t_i^{i \in 1...n} -> x_i := t_i\ i \in 1...n}
+
+\bigskip
+
+\inference[E-MatchTuple:]{}
+{\<match>\ v_i^{i \in 1...n} \<with>\ x_i^{i \in 1...n} \mathligsoff -> \mathligson\ t ->
+[x_i |-> v_i]t}
+
+\bigskip
+
+
+\inference[E-List:]
+{t_j -> t'_j}
+{<v_i^{i \in 1...j-1}\ t_j\ t_k^{k \in j+1...n}> -> <v_i^{i \in 1...j-1}\ t'_j\ t_k^{k \in j+1...n}>}
+
+\bigskip
+
+\inference[E-MatchList:]{}
+{\<match>\ <v_i^{i \in 1...n}>\ \<with>\ <x \mid \overline{x}> \mathligsoff -> \mathligson\ t ->
+[x |-> v_1, \overline{x} |-> <v_i^{i \in 2...n}>]t}
+
+\bigskip
+
+\inference[E-Vector:]
+{t_j -> t'_j}
+{[v_i^{i \in 1...j-1}\ t_j\ t_k^{k \in j+1...n}] -> [v_i^{i \in 1...j-1}\ t'_j\ t_k^{k \in j+1...n}]}
+
+\bigskip
+
+\inference[E-Matrix:]
+{t_{rk} -> t'_{rk}}
+{[v_{ij}^{\stackrel{i \in 1...r-1}{j \in 1...m}} \mid
+v_{rj}^{j \in 1...k-1}\ t_{rk}\ t_{rj}^{j \in k+1...m} \mid
+v_{ij}^{\stackrel{i \in r+1...n}{j \in 1...m}}] ->
+[v_{ij}^{\stackrel{i \in 1...r-1}{j \in 1...m}} \mid
+v_{rj}^{j \in 1...k-1}\ t'_{rk}\ t_{rj}^{j \in k+1...m} \mid
+v_{ij}^{\stackrel{i \in r+1...n}{j \in 1...m}}]}
+
+\bigskip
+
+\inference[E-DictKey:]
+{t_j -> t'_j}
+{{v_i => \overline{v}_i}^{i \in 1...j-1}, t_j => \overline{t}_j, {t_k => \overline{t}_k}^{k \in j+1...n} -> 
+{v_i => \overline{v}_i}^{i \in 1...j-1}, t'_j => \overline{t}_j, {t_k => \overline{t}_k}^{k \in j+1...n}}
+
+\bigskip
+
+\inference[E-DictValue:]
+{\overline{t}_j -> \overline{t'}_j}
+{{v_i => \overline{v}_i}^{i \in 1...j-1}, v_j => \overline{t}_j, {t_k => \overline{t}_k}^{k \in j+1...n} -> 
+{v_i => \overline{v}_i}^{i \in 1...j-1}, v_j => \overline{t'}_j, {t_k => \overline{t}_k}^{k \in j+1...n}}
+\end{figure}

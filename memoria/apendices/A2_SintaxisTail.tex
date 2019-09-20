@@ -1,0 +1,116 @@
+\section{Sintaxis de tail.}
+\label{apendice:sintaxis_tail}
+
+\begin{grammar}{t}{términos}
+(t)           & paréntesis \\
+t;t           & secuencia \\
+x             & variable \\
+x := t        & asignación \\
+x : \tau      & declaración tipo \\
+\ \<typeof> t   & operador typeof \\
+n             & constante numérica \\
+-t            & operador opuesto \\
+t + t         & operador suma \\
+t - t         & operador resta \\
+t * t         & operador producto \\
+t / t         & operador cociente \\
+t // t        & operador fracción \\
+t \% t        & operador módulo \\
+t\ \hat{}\ t & operador exponenciación \\
+\ \<match>\ t\ \<with>\ n\ \mathligsoff -> \mathligson\ t & match numérico \\
+\ \<match>\ t\ \<with>\ \_\ \mathligsoff -> \mathligson\ t & match por defecto \\
+``t^s"         & constante string \\
+\ :x            & átomo \\
+True          & constante true \\
+False          & constante false \\
+t \<and> t        & operador and \\
+t \<or> t         & operador or \\
+t \<xor> t        & operador xor \\
+\ \<not> t          & operador not \\
+t = t          & operador igualdad \\
+t != t         & operador desigualdad \\
+t < t          & operador menor \\
+t \mathligsoff <= \mathligson t         & operador menor-igual \\
+t > t          & operador mayor \\
+t >= t         & operador mayor-igual \\
+\ \<if> t \<then> t\ \{\<elif> t \<then> t\} \<else> t & condicional \\
+\ \<lambda> x.t     & función lambda \\
+t(t)          & aplicación \\
+t.t(t)        & método \\
+... \\
+\end{grammar}
+
+\hspace*{-2cm}
+\begin{grammar}{t}{términos}
+... \\
+t_i^{i \in 1...n} & tupla \\
+\ \<match>\ t\ \<with>\ t_i^{i \in 1...n} \mathligsoff -> \mathligson\ t & match tupla \\
+\ <t_i^{i \in 1...n}> & lista \\
+\ \<match>\ t\ \<with>\ <x \mid \overline{x}> \mathligsoff -> \mathligson\ t & match lista \\
+{} [{t_i}^{i \in 1...n}] & vector \\
+{} [t_{ij}^{\stackrel{i \in 1...n}{j \in 1...m}}] & matriz \\
+{t_i => \overline{t}_i}^{i \in 1...n} & diccionario\\
+t[t]          & operador proyección \\
+\ \<variant> V::C_i({l_{ij} : \tau_{ij}}^{j \in 1...r_i})^{i \in 1...n} & declaración variant \\
+V::C_i(t_{ij})^{j \in 1...r_i} & instancia variant \\
+t.t           & acceso atributo \\
+\ \<match> t \<with> V::C_i(t_{ij})^{j \in 1...r_i} \mathligsoff -> \mathligson\ t & match variant \\
+\end{grammar}
+
+\bigskip
+\hspace*{-2cm}
+\begin{grammar}{v}{valores}
+n             & constante numérica \\
+True          & constante true \\
+False          & constante false \\
+``t^s"         & constante string \\
+\ :x            & átomo \\
+\ \<lambda> x.t     & función lambda \\
+t_i^{i \in 1...n} & tupla \\
+\ <t_i^{i \in 1...n}> & lista \\
+{} [{t_i}^{i \in 1...n}] & vector \\
+{} [t_{ij}^{\stackrel{i \in 1...n}{j \in 1...m}}] & matriz \\
+{t_i => \overline{t}_i}^{i \in 1...n} & diccionario\\
+V::C_i(t_{ij})^{j \in 1...r_i} & instancia variant \\
+\end{grammar}
+
+\bigskip
+\hspace*{-2cm}
+\begin{grammar}{T}{tipos estáticos}
+B                            & tipos base \\ % Int, String, :<NombreAtomo>, ...
+T -> T                       & tipo función \\
+T \<or> T                    & unión de tipos \\
+T \<and> T                   & intersección de tipos \\
+\ \<not> T                     & negación de tipos \\
+Void                         & tipo vacío \\
+U                            & tipo universal \\
+{T_i}^{i \in 1...n}          & tipo tupla \\
+List \<of> T                 & tipo lista \\
+Vector \<of> T               & tipo vector \\
+Dictionary \<of> T, T        & tipo diccionario \\
+Matrix \<of> T               & tipo matriz \\
+\end{grammar}
+
+\bigskip
+\begin{grammar}{\tau}{tipos graduales}
+\ ?                            & tipo desconocido \\
+B                            & tipos base \\ % Int, String, :<NombreAtomo>, ...
+\tau -> \tau                 & tipo función \\
+\tau \<or> \tau              & unión de tipos \\
+\tau \<and> \tau             & intersección de tipos \\
+\ \<not> T                     & negación de tipos \\
+Void                         & tipo vacío \\
+U                            & tipo universal \\
+{\tau_i}^{i \in 1...n}       & tipo tupla \\
+List\ [\<of> \tau]           & tipo lista \\
+Vector\ [\<of> \tau]         & tipo vector \\
+Dictionary\ [\<of> \tau, \tau]      & tipo diccionario \\
+Matrix\ [\<of> \tau]         & tipo matriz \\
+\end{grammar}
+
+\bigskip
+\begin{grammar}{\Gamma}{contexto}
+\o               & contexto vacío \\
+\Gamma, x:\tau   & anotación de tipo \\
+\Gamma, x:=t     & asignación de valor \\
+\end{grammar}

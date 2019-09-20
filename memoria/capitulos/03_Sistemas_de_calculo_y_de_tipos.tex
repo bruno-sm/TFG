@@ -1,0 +1,280 @@
+\chapter{Sistemas de cálculo} \label{sect:sistemas_de_calculo}
+
+Al crear un lenguaje nuestro objetivo está claro, tenemos que diseñar una herramienta que permita el cálculo de expresiones de forma más conveniente cuanto más comunes sean en nuestro contexto particular. Parece entonces sensato preguntarse qué es el cálculo, profundizar en su naturaleza y conocer sus límites. Entramos en el terreno de la Teoría de la Computación.\\
+Para llevar a cabo esta tarea necesitaremos dos elementos, un modelo formal suficientemente simple que se acerque a lo que intuitivamente conocemos como cálculo y un conjunto de herramientas matemáticas que nos permitan razonar sobre este. El primero es lo que se llama un sistema de cálculo o \textit{calculi} y entre ellos el más conocido es el \textit{cálculo lambda}, el cual tomaré prestado para introducir las diferentes herramientas que usaremos a lo largo del trabajo.\\
+
+La mejor forma de entender el funcionamiento del cálculo lambda es verlo en acción.
+
+$$(\lambda x.x) y$$
+
+En este pequeño ejemplo tenemos todos los componentes del cálculo lambda; el término $\lambda x.x$ se denomina abstracción lambda y es la piedra angular del sistema, a los términos $x$ e $y$ se les llama variables. Los paréntesis determinan el alcance de la abstracción, indicando que la variable $x$ se encuentra en su interior, en ese caso decimos que $x$ está ligada, mientras que $y$ sería una variable libre al no estar encerrada por ninguna abstracción.
+Por último tenemos una aplicación indicada por la yuxtaposición de la abstracción $\lambda x.x$ y el término $y$, esta disposición de términos implica que se pueden sustituir todas las variables $x$ dentro de la abstracción por el término $y$, obteniendo así la evaluación $(\lambda x.x) y \to y$, que se lee como ``$(\lambda x.x) y$ evalúa a $y$".\\
+
+
+Una vez conocidas todas las piezas que componen el sistema es natural preguntarnos cuáles de todas sus posibles combinaciones son válidas. Por ejemplo, ¿podemos decir que la expresión  $(\lambda x.xx) \lambda x.xz$ es válida?, para describir formalmente estas reglas tenemos que introducir nuestra primera herramienta, las gramáticas. Existen diferentes tipos de gramáticas, clasificadas por su poder expresivo, pero todas tienen el mismo objetivo, establecer de forma inequívoca qué combinaciones de términos están permitidas y proporcionar métodos sistemáticos para comprobarlo. En este trabajo utilizaré exclusivamente gramáticas libres de contexto, dado que en ningún momento habrá necesidad de mayor capacidad expresiva. Usaré para su definición la sintaxis EBNF (extended \acs{BNF}), la cual explicaré brevemente a continuación al mismo tiempo que introduzco la gramática del cálculo lambda.\\
+
+\begin{grammar}{t}{términos}
+x             & variable \\
+\lambda x.t     & abstracción \\
+t\ t           & aplicación
+\end{grammar}
+
+\begin{grammar}{v}{valores}
+\lambda x.t     & valor abstracción
+\end{grammar}
+
+\bigskip
+
+Lo que esta notación nos dice es que a los términos del cálculo lambda les damos la etiqueta $t$, y un término puede ser una variable, una abstracción o una aplicación.
+A su vez a los valores les damos la etiqueta $v$ y solamente las abstracciones son consideradas como valores.
+La utilidad de distinguir entre términos y valores la veremos a continuación, pero de forma general podemos decir que los valores serán los únicos resultados posibles
+tras finalizar la evaluación de una expresión.
+Las abstracciones se codifican como ``$\lambda x.$''` junto con un término y las aplicaciones situando un término al lado de otro. De esta forma vemos que, efectivamente, $(\lambda x.xx) \lambda x.xz$ es una expresión válida, ya que las abstracciones son términos y una aplicación se puede producir entre dos términos cualesquiera. Pero aún nos queda una pregunta, ¿cómo se evalúa esta expresión? De la misma forma que podemos formalizar la sintaxis y la gramática del sistema podemos formalizar su significado, es decir, su semántica.\\
+
+A la hora de especificar una semántica existen varios tipos de formalismos, nosotros usaremos la llamada semántica operacional (operational semantics), especialmente conveniente para lenguajes funcionales (i.e. aquellos fundamentados sobre el cálculo lambda). Es esta herramienta la que nos muestra el significado concreto de ``computar'' aplicado al cálculo lambda, que no es otra cosa que reescribir una expresión sustituyendo la variable ligada de una abstracción por el término situado a su izquierda.\\
+
+\[
+\inference[E-Aplicación1:]{t_1 -> t_1'}{t_1\ t_2 -> t_1'\ t_2}\\
+\]
+\[
+\inference[E-Aplicación2:]{t_2 -> t_2'}{v_1\ t_2 -> v_1\ t_2'}\\
+\]
+\[
+\inference[E-Sustitución:]{}{(\lambda x.t_{12})v_2 -> [x |-> v_2]t_{12}}
+\]
+\bigskip
+
+La semántica operacional se compone de reglas, llamadas reglas de evaluación, las cuales toman prestada la notación de la deducción natural, donde si se cumple la proposición superior de la regla podemos deducir que también se cumple la inferior. Por ejemplo la regla (E-Aplicación1) se leería como ``si el término $t_1$ puede evaluarse a $t_1'$ entonces la expresión $t_1\ t_2$ puede evaluarse a $t_1'\ t_2$''. Notar que la regla (E-Aplicación2) es también la condición de parada de (E-Aplicación1) y entre las dos definen un orden de evaluación: primero se evalúa el término de la izquierda hasta obtener un valor y a continuación se evalúa el de la derecha.
+Por último la notación utilizada en (E-Sustitución) $[x |-> v_2]t_{12}$ es equivalente al término $t_{12}$ sustituyendo todas las ocurrencias de $x$ por $v_2$, es decir $[x |-> v]xyx$ equivaldría a $vyv$.\\
+
+Establecidas estas reglas ya podemos evaluar cualquier expresión. Veamos por ejemplo cual es el valor de $(\lambda x.x) (\lambda y.y) ((\lambda x.x) (\lambda z.(\lambda x.x) z))$:\\
+
+
+\begin{gather*}
+\inference[E-Sustitución:]{}{(\lambda x.x)(\lambda y.y) -> (\lambda y.y)} \\
+\inference[E-Aplicación1:]{}{
+\begin{array}{@{}c@{}}
+(\lambda x.x) (\lambda y.y) ((\lambda x.x) (\lambda z.(\lambda x.x) z)) -> \\
+ -> (\lambda y.y) ((\lambda x.x) (\lambda z.(\lambda x.x) z))
+\end{array}} \\
+\inference[E-Sustitución:]{}{(\lambda x.x) (\lambda z.(\lambda x.x) z) -> \lambda z.(\lambda x.x) z} \\
+\inference[E-Aplicación2:]{}{
+\begin{array}{@{}c@{}}
+(\lambda y.y) ((\lambda x.x) (\lambda z.(\lambda x.x) z)) -> \\
+ -> (\lambda y.y) (\lambda z.(\lambda x.x) z)
+\end{array}} \\
+\inference[E-Sustitución:]{}{(\lambda y.y) (\lambda z.(\lambda x.x) z) -> \lambda z.(\lambda x.x) z}
+\end{gather*}
+\bigskip
+
+
+Tenemos así que $(\lambda x.x) (\lambda y.y) ((\lambda x.x) (\lambda z.(\lambda x.x) z)) ->^{*} \lambda z.(\lambda x.x) z$, donde $->^{*}$ significa que una expresión evalúa a otra en varios pasos. Como vemos, la notación utilizada nos permite tratar la salida de una regla como la entrada de otra, pudiendo escribir razonamientos de forma compacta y cómoda.\\
+
+Con lo presentado hasta ahora podemos describir de manera inequívoca un lenguaje simple como el calculo lambda, pero si queremos añadir restricciones más complejas para obtener ciertas propiedades necesitamos echar mano de los sistemas de tipos.\\
+
+
+\section{Restricción del lenguaje mediante sistemas de tipos}
+
+Hasta ahora hemos usado el cálculo lambda como excusa para introducir las herramientas
+necesarias para describir con precisión su sintaxis y sus reglas de evaluación.
+Para hacer lo mismo con las reglas de tipado necesitaremos extender el sistema para
+que acepte tipos, es decir, necesitamos un nuevo lenguaje, el llamado calculo lambda
+simplemente tipado (simply typed lambda calculus).\\
+
+Como ya hemos visto, lo primero a la hora de representar un lenguaje es definir su sintaxis.
+La sintaxis del cálculo lambda simplemente tipado es similar a la del cálculo lambda ordinario, la única 
+diferencia es que se añade nueva notación para indicar qué tipos aceptan las abstracciones. Estas diferencias
+se encuentran marcadas en rojo en la siguiente gramática:\\
+
+\begin{grammar}{t}{términos}
+  x             & variable \\
+  \lambda x\textcolor{myred}{:T}.t     & abstracción \\
+  t\ t           & aplicación
+\end{grammar}
+
+\begin{grammar}{v}{valores}
+  \lambda x\textcolor{myred}{:T}.t     & valor abstracción
+\end{grammar}
+
+{\color{myred}
+\begin{grammar}{T}{tipos}
+  T \to T    & tipo función
+\end{grammar}
+}
+
+{\color{myred}
+\begin{grammar}{\Gamma}{contexto}
+  \o    & contexto vacío \\
+  \Gamma,x:T    & asociación entre tipo y variable
+\end{grammar}}
+
+\bigskip
+
+Lo primero que destaca es la notación ``$:T$'', la cual indica que una abstracción solo acepta parámetros del tipo $T$. Un tipo $T$ se construye mediante la sintaxis $T_1 \to T_2$, que es el tipo definitorio de una
+función cuyo dominio son elementos del tipo $T_1$ y su imagen son elementos del tipo $T_2$.\\
+
+Por último se define la representación de lo que llamamos un contexto. Para poder comprobar que una aplicación
+tiene el tipo correcto (que el tipo de la expresión que pasamos a la abstracción coincide con el tipo de la abstracción) necesitamos conocer el tipo de todas las expresiones y por tanto tenemos que tratar el tipo asignado a cada expresión como una propiedad global del sistema (algo a lo que podemos acceder en cualquier momento), ahí es donde entra nuestro contexto. El contexto $\Gamma$ es simplemente una lista en la que se guarda el tipo que se le ha asignado a cada expresión, y usaremos la notación $\Gamma |- x:T$ para decir ``del contexto $\Gamma$ se deduce que $x$ tiene el tipo $T$''. Por ejemplo si $\Gamma = \o, x_1:T_1, x_2:T_2$ entonces $\Gamma |- x_1:T_1$.\\
+
+Sobre las reglas de evaluación del cálculo lambda simplemente tipado no hay mucho que decir, son las mismas que
+teníamos en el cálculo lambda con las adiciones sintácticas que hemos visto.\\
+
+\[
+\inference[E-Aplicación1:]{t_1 -> t_1'}{t_1\ t_2 -> t_1'\ t_2}\\
+\]
+\[
+\inference[E-Aplicación2:]{t_2 -> t_2'}{v_1\ t_2 -> v_1\ t_2'}\\
+\]
+\[
+\inference[E-Sustitución:]{}{(\lambda x\textcolor{myred}{:T_{11}}.t_{12})v_2 -> [x |-> v_2]t_{12}}
+\]
+\bigskip
+
+Así llegamos al que es el propósito de esta sección, la nueva herramienta que nos permitirá definir nuestro sistema de tipos, las reglas de tipado. Estas reglas funcionan con la misma lógica que la semántica operacional, la diferencia es que en vez de hablar sobre la forma en que las expresiones se evalúan habla de cómo el tipo de una
+expresión es deducido, y dado que solamente las expresiones que puedan ser producidas a través de estas reglas
+son válidas en nuestro lenguaje, también impone restricciones sobre que combinaciones de tipos son válidas y cuales no.
+
+\[\inference[T-Var:]{x:T \in \Gamma}{\Gamma |- x:T}\]
+
+\[\inference[T-Abs:]
+  {\Gamma,x:T_1 |- t_2:T_2}
+  {\Gamma |- \lambda x:T_1.t2\ :\ T_1 -> T_2}
+\]
+
+\[\inference[T-Ap:]
+  {\Gamma |- t_1:T_{11}->T_{12}\ \ \Gamma |- t_2:T_{11}}
+  {\Gamma |- t_1\ t_2:T_{12}}
+\]
+
+La premisa de (T-Var), $x:T \in \Gamma$, se lee como ``El tipo asumido para x en $\Gamma$ es $T$''. Esto, como veremos, nos proporciona una regla para construir un contexto desde el que se pueda deducir que $x:T$. La regla (T-Abs) nos dice que, si en nuestro contexto tenemos que la variable de la abstracción está asociada al tipo $T_1$ y se deduce que el cuerpo de la abstracción tiene el tipo $T_2$, a esta abstracción le corresponderá el tipo de una función que lleva elementos del tipo $T_1$ en elementos del tipo $T_2$. Por último la regla (T-Ap) impone la restricción de que en las aplicaciones la expresión de la izquierda debe ser un tipo función y la de la derecha tiene que tener el mismo tipo que su dominio.\\
+
+Para ver el funcionamiento de este sistema demostraremos que $(\lambda x:Bool.x)true$ tiene como tipo $Bool$. En este caso consideraremos que $Bool$ es un tipo primitivo y añadiremos la regla \inference[T-True:]{}{\o |- true:Bool}.\\
+
+\[\inference[T-Ap:]
+  {\inference[T-Abs:]
+    {\inference[T-Var:]
+      {x:Bool \in x:Bool}
+      {x:Bool |- x:Bool}}
+    {\o |- \lambda x:Bool.x : Bool -> Bool}
+   \quad
+   \inference[T-True:]{}
+    {\o |- true:Bool}}
+  {\o |- (\lambda x:Bool.x)true : Bool}
+\]
+
+\bigskip
+
+Dado que la regla (T-Ap) construye un contexto donde la combinación de tipos es válida y debido a la regla (T-Abs), solo tiene sentido que en el contexto aparezca $x:T$ si existe la etiqueta $\lambda x:T$, así desde un punto de vista práctico podemos leer $x:T \in \Gamma$ como ``La etiqueta x:T se encuentra en la expresión''.\\
+
+Notar que en base a este sistema de tipos, una expresión como $(\lambda x:Int.x)true$ sería rechazada, ya que
+no existe ninguna derivación mediante la que pueda tiparse. De esta forma ganamos control sobre que clase de
+parámetros pueden o no recibir las abstracciones. Sin embargo, añadir un sistema de tipos a un lenguaje
+puede tener ventajas que van incluso más allá de mejorar el control que se tiene sobre él, se puede forzar
+a que el lenguaje cumpla ciertas propiedades y el cálculo lambda simplemente tipado es un gran ejemplo de esto.\\
+
+\begin{theorem}[Normalization property]
+  La evaluación de un programa bien tipado en el cálculo lambda simplemente tipado termina en un número finito de pasos.
+\end{theorem}
+
+Ya que la demostración de este teorema requiere de técnicas de normalización que no son relevantes para el resto del trabajo y se puede encontrar en \cite{TPL}, no se abordará. En todo caso, la observación fundamental es
+que, simplemente añadiendo un sistema de tipos, hemos sido capaces de asegurar algo tan deseable como 
+que cualquier programa escrito en este lenguaje siempre termina. Evidentemente esta propiedad no podía venir sin
+un coste, y es que, debido al problema de la parada, el cálculo lambda simplemente tipado no puede ser turing-completo.\\
+
+A pesar de todo, este ejemplo nos sirve como incentivo para estudiar qué otras propiedades podrían ser deseables
+en un lenguaje de programación. A la que nosotros prestaremos más atención será a si nuestro lenguaje es seguro.\\
+
+\begin{definition}[Forma normal]
+  Un término $t$ está en forma normal si no se le puede aplicar ninguna regla de evaluación (i.e no existe $t'$ tal que $t -> t'$).
+\end{definition}
+
+\begin{definition}[Término atascado]
+  Decimos que un término cerrado (término sin variables libres) se encuentra atascado (in stuck state) si está
+  en forma normal pero no es un valor.
+\end{definition}
+
+\begin{definition}[Seguridad]
+  Decimos que un sistema de tipos es seguro (safe o sound) si cualquier término bien tipado no se queda atascado.
+  Diremos también que un lenguaje es seguro si su sistema de tipos lo es.
+\end{definition}
+
+
+Es evidente que poder garantizar la seguridad de un lenguaje es extremadamente útil en la práctica ya que el
+programa o bien seguirá ejecutándose o eventualmente llegará a un valor final. Evitamos así situaciones en
+las que su comportamiento no está determinado, como por ejemplo leer en una posición de memoria no reservada en \textit{C}.\\
+
+Esta propiedad es tan importante en la Teoría de Lenguajes de Programación que se ha desarrollado un procedimiento estándar para demostrarla en un lenguaje arbitrario. Esta demostración se realiza en dos pasos a
+través de los teoremas de \textit{progreso} y \textit{preservación}.
+
+\begin{theorem}[Progreso]
+  Un término bien tipado no está atascado.
+\end{theorem}
+
+\begin{theorem}[Preservación]
+  Si un término está bien tipado, tras un paso de evaluación lo sigue estando.
+\end{theorem}
+
+Si podemos demostrar que un determinado lenguaje cumple ambas propiedades habremos deducido con éxito que un término bien tipado nunca puede quedarse atascado durante su evaluación. Como ejemplo y para terminar esta sección, veamos como podríamos demostrar que el cálculo lambda simplemente tipado es seguro. Esta demostración está extraída directamente del capítulo 9 de \textit{Types and Programming Languages} \cite{TPL}.\\
+
+\begin{theorem}[Progreso del cálculo lambda simplemente tipado]
+\label{theo:prog_lambda}
+  Sea $t$ un término cerrado y bien tipado (i.e. $\o |- t:T$ para algún $T$), entonces o bien $t$ es un valor o existe algún $t'$ tal que $t -> t'$.
+\end{theorem}
+
+\begin{proof}
+  La demostración se realizará por inducción sobre las posibles derivaciones de $t$. Para ello es necesario introducir el concepto de subtérmino. Si $t$ es un término en el que a su vez aparecen los términos $t_1, t_2, ..., t_n$ diremos que estos son subtérminos inmediatos de $t$. Por ejemplo $x$ sería un subtérmino inmediato de $\lambda x.x$.\\
+  
+  Así, supuesto cierto el progreso para todos los subtérminos inmediatos de $t$ podemos poner en marcha la inducción.\\
+  
+  Según nuestra gramática tenemos tres casos posibles:
+  \begin{enumerate}
+    \item Que $t$ sea una variable ($t = x$).
+    \item Que $t$ sea una abstracción ($t = \lambda x:T.t'$).
+    \item Que $t$ sea una aplicación ($t = t_1\ t_2$).
+  \end{enumerate}
+  
+  El primer caso no se puede dar ya que $t$ es un término cerrado y no hay ninguna regla que permita que durante
+  la evaluación un término cerrado deje de serlo.\\
+  
+  El segundo caso es trivial, ya que una abstracción es un valor.\\
+  
+  El tercer caso es el más interesante. Por hipótesis de inducción $t_1$ o bien será un valor o podrá evaluarse un paso más. Lo mismo pasa con $t_2$. Además al ser $t$ un término bien tipado necesariamente $\o |- t1:T_{11} -> T_{12}$ y $\o |- t2:T_{11}$. Tenemos así tres casos posibles:\\
+  
+  \begin{itemize}
+    \item Si existe un $t'_1$ tal que $t_1 -> t'_1$ entonces aplicando la regla (E-Aplicación1) $t -> t'_1\ t_2$.
+    
+    \item Si $t_1$ es un valor y $t_2 -> t'_2$ aplicando (E-Aplicación2) tenemos que $t -> t_1\ t'_2$.
+    
+    \item Si $t_1$ y $t_2$ son valores. Como $t1:T_{11} -> T_{12}$, $t_1$ tendrá la forma $\lambda x:T_{11}.t_{12}$, por lo que aplicando (E-Sustitución) obtendremos $t -> [x -> t_2]t_1$.
+  \end{itemize}
+  
+\end{proof}
+
+
+\begin{theorem}[Preservación del cálculo lambda simplemente tipado]
+\label{theo:pres_lambda}
+  Sea $t$ un término cerrado y bien tipado con $\Gamma |- t:T$ y $t -> t'$ entonces $\Gamma |- t':T$.
+\end{theorem}
+
+\begin{proof}
+  Aplicaremos inducción sobre las subderivaciones, sinedo la hipótesis que si $s:S$ y $s -> s'$ entonces $s':S$. Veamos caso por caso con que regla podríamos deducir que $t:T$.\\
+  
+  \begin{itemize}
+    \item \textbf{(T-Var):} En este caso deducimos que $t=x$ y $x:T$.\\
+    Dado que $t$ es un término no cerrado no tenemos en cuenta este caso.\\
+    
+    \item \textbf{(T-Abs):} En este caso deducimos que $x:T_1$, $t_2:T_2$ y $t=\lambda x:T_1.t_2$.\\
+    En este caso $t$ es un valor y se cumplen las condiciones del teorema por omisión.
+    
+    \item \textbf{(T-Ap):} En este caso deducimos que $t_1:T_{11} -> T_{12}$, $t_2:T_{11}$ y $t = t_1t_2$.\\
+    Con este $t$ hay tres reglas que permiten la evaluación $t -> t'$:\\
+    
+    \begin{itemize}
+      \item \textbf{(E-Aplicación1):} Deducimos que $t_1 -> t'_1$ y por hipótesis de inducción $t'_1:T_{11} -> T_{12}$. Entonces $t -> t' = t'_1t_2$ y aplicando (T-Ap) tenemos que $t':T_{12}$.\\
+      
+      \item \textbf{(E-Aplicación2):} Deducimos que $t_1 = v_1$ es un valor y $t_2 -> t'_2$. Por hipótesis de inducción $t'_2:T_{11}$. Entonces $t -> t' = v_1t'_2$ y aplicando (T-Ap) tenemos que $t':T_{12}$.\\
+      
+      \item \textbf{(E-Sustitución):} Deducimos que $t_1 = \lambda x:T_{11}.t_{12}$ y que $t_2 = v_2$ es un valor. Como $t_1:T_{11} -> T_{12}$, dado un valor $v:T_{11}$ necesariamente $[x |-> v]t_{12} : T_{12}$. Entonces $t -> t' = [x |-> v_2]t_{12}$ y tenemos que $t':T_{12}$.\\
+    \end{itemize}
+  \end{itemize}
+\end{proof}
