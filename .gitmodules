@@ -1,0 +1,3 @@
+[submodule "tail"]
+	path = tail
+	url = https://github.com/bruno-sm/tail.git
